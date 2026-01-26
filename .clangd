@@ -1,0 +1,10 @@
+CompileFlags:
+  CompilationDatabase: build/current
+Index:
+  StandardLibrary: Yes
+Completion:
+  ArgumentLists: FullPlaceholders
+Diagnostics:
+  UnusedIncludes: Strict
+  Includes:
+    IgnoreHeader: ["stm32h7xx_hal.h"]

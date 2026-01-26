@@ -1,0 +1,35 @@
+# --- Compilation & Build ---
+build/
+bin/
+obj/
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+.cache
+
+# --- CMake ---
+CMakeUserPresets.json
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+install_manifest.txt
+
+# --- IDEs & Editors---
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+!.vscode/settings.json
+.history/
+*.code-workspace
+
+# --- STM32CubeMX Specific ---
+*.ioc.bak
+mxproject.bak
+
+# --- OS specifics ---
+.DS_Store
+Thumbs.db

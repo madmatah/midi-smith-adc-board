@@ -1,0 +1,36 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug STM32",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32h7x.cfg",
+                "${workspaceFolder}/.vscode/openocd-gdb-detach-resume.cfg"
+            ],
+            "cwd": "${workspaceFolder}",
+            "executable": "${command:cmake.launchTargetPath}",
+            "device": "STM32H743ZITx",
+            "svdFile": "${workspaceFolder}/hardware/svd/STM32H743.svd",
+            "runToEntryPoint": "main",
+            "rttConfig": {
+                "enabled": true,
+                "address": "auto",
+                "polling_interval": 10,
+                "rtt_start_retry": 1000,
+                "clearSearch": true,
+                "decoders": [
+                    {
+                        "port": 0,
+                        "type": "console",
+                        "label": "RTT"
+                    }
+                ]
+            },
+            "preLaunchTask": "CMake: build"
+        }
+    ]
+}
