@@ -1,0 +1,24 @@
+cmake_minimum_required(VERSION 3.22)
+
+set(VERSION_GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+set(VERSION_GENERATED_HEADER "${VERSION_GENERATED_DIR}/app/version_build.hpp")
+set(VERSION_SCRIPT "${CMAKE_SOURCE_DIR}/cmake/version/generate_version_header.cmake")
+
+if(CMAKE_CONFIGURATION_TYPES)
+  set(VERSION_BUILD_TYPE_ARG "$<CONFIG>")
+else()
+  set(VERSION_BUILD_TYPE_ARG "${CMAKE_BUILD_TYPE}")
+endif()
+
+add_custom_target(
+  version_check ALL
+  COMMAND "${CMAKE_COMMAND}"
+          -DOUTPUT_HEADER="${VERSION_GENERATED_HEADER}"
+          -DSOURCE_DIR="${CMAKE_SOURCE_DIR}"
+          -DVERSION_BUILD_TYPE="${VERSION_BUILD_TYPE_ARG}"
+          -P "${VERSION_SCRIPT}"
+  BYPRODUCTS "${VERSION_GENERATED_HEADER}"
+  DEPENDS "${VERSION_SCRIPT}"
+  VERBATIM
+)
+

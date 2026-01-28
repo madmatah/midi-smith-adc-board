@@ -57,6 +57,9 @@ else()
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
 
+# Versioning
+include(cmake/version/versioning.cmake)
+
 # Add compile options for embedded C++
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>
@@ -75,6 +78,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     app/src/application.cpp
     app/src/app_entry.cpp
+    app/src/version.cpp
     app/src/tasks/test_task.cpp
     app/src/tasks/shell_task.cpp
     domain/src/shell/command_parser.cpp
@@ -102,6 +106,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     app/include
+    ${CMAKE_BINARY_DIR}/generated
     bsp/include
     Third_Party/SEGGER/RTT/RTT
     Third_Party/SEGGER/RTT/Config
@@ -127,6 +132,8 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
 )
+
+add_dependencies(${CMAKE_PROJECT_NAME} version_check)
 
 endif()
 
