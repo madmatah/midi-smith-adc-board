@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 namespace domain::io {
 
@@ -16,6 +17,12 @@ class WritableStreamRequirements {
 
   virtual void Write(char c) noexcept = 0;
   virtual void Write(const char* str) noexcept = 0;
+
+  void Write(std::string_view str) noexcept {
+    for (char c : str) {
+      Write(c);
+    }
+  }
 };
 
 class ReadableStreamRequirements {

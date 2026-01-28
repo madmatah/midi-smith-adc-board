@@ -6,10 +6,12 @@
 #include "app/config.hpp"
 #include "app/tasks/shell_task.hpp"
 #include "app/tasks/test_task.hpp"
+#include "app/version.hpp"
 #include "bsp/board.hpp"
 #include "bsp/rtt_logger.hpp"
 #include "bsp/rtt_telemetry_sender.hpp"
 #include "bsp/serial/uart_stream.hpp"
+#include "shell/commands/version_command.hpp"
 #include "usart.h"
 
 namespace app {
@@ -53,6 +55,10 @@ void Application::create_tasks() noexcept {
   if (!shell_constructed) {
     shell_task_ptr = new (shell_task_storage) app::Tasks::ShellTask(console_stream, shell_config);
     shell_constructed = true;
+
+    static shell::commands::VersionCommand version_cmd(version::kFullVersion, version::kBuildType,
+                                                       version::kCommitDate);
+    shell_task_ptr->RegisterCommand(version_cmd);
   } else {
     shell_task_ptr = reinterpret_cast<app::Tasks::ShellTask*>(shell_task_storage);
   }

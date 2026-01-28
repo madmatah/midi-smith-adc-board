@@ -14,7 +14,7 @@ class ShellTask {
   void run() noexcept;
   bool start() noexcept;
 
-  bool RegisterCommand(const shell::ShellCommand& command) noexcept {
+  bool RegisterCommand(shell::CommandRequirements& command) noexcept {
     return _engine.RegisterCommand(command);
   }
 

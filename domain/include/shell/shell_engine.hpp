@@ -50,7 +50,7 @@ class ShellEngine {
     return did_rx;
   }
 
-  bool RegisterCommand(const shell::ShellCommand& command) noexcept {
+  bool RegisterCommand(CommandRequirements& command) noexcept {
     return _dispatcher.Register(command);
   }
 

@@ -27,6 +27,7 @@ add_executable(unit_tests
     domain/shell/command_parser.test.cpp
     domain/shell/line_editor.test.cpp
     domain/shell/command_dispatcher.test.cpp
+    domain/shell/commands/version_command.test.cpp
 )
 target_link_libraries(unit_tests PRIVATE
     Catch2::Catch2WithMain

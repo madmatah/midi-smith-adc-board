@@ -26,12 +26,32 @@ class StreamStub : public domain::io::StreamRequirements {
   std::string _output;
 };
 
-static int test_call_count = 0;
-static void TestHandler(int argc, char** argv,
-                        domain::io::WritableStreamRequirements& out) noexcept {
-  test_call_count++;
-  out.Write("called");
-}
+class TestCommand : public shell::CommandRequirements {
+ public:
+  TestCommand(const char* name, const char* help, const char* response)
+      : _name(name), _help(help), _response(response), _call_count(0) {}
+
+  std::string_view Name() const noexcept override {
+    return _name;
+  }
+  std::string_view Help() const noexcept override {
+    return _help;
+  }
+  void Run(int, char**, domain::io::WritableStreamRequirements& out) noexcept override {
+    _call_count++;
+    out.Write(_response);
+  }
+
+  int CallCount() const {
+    return _call_count;
+  }
+
+ private:
+  const char* _name;
+  const char* _help;
+  const char* _response;
+  int _call_count;
+};
 
 }  // namespace
 
@@ -43,20 +63,21 @@ TEST_CASE("The CommandDispatcher class", "[shell]") {
 
   SECTION("The Register() method") {
     SECTION("Should successfully register a command") {
-      bool ok = dispatcher.Register({"test", "help text", TestHandler});
+      TestCommand test_cmd("test", "help text", "called");
+      bool ok = dispatcher.Register(test_cmd);
       REQUIRE(ok == true);
     }
   }
 
   SECTION("The Dispatch() method") {
-    dispatcher.Register({"test", "help text", TestHandler});
-    test_call_count = 0;
+    TestCommand test_cmd("test", "help text", "called");
+    dispatcher.Register(test_cmd);
 
     SECTION("When calling an existing command") {
       char cmd[] = "test";
       char* argv[] = {cmd};
       dispatcher.Dispatch(1, argv, stream);
-      REQUIRE(test_call_count == 1);
+      REQUIRE(test_cmd.CallCount() == 1);
       REQUIRE(stream.GetOutput() == "called");
     }
 

@@ -46,6 +46,7 @@ if(HOST_TESTS)
         domain/src/shell/line_editor.cpp
         domain/src/shell/command_dispatcher.cpp
         domain/src/shell/shell_engine.cpp
+        domain/src/shell/commands/version_command.cpp
     )
     target_include_directories(domain PUBLIC
         domain/include
@@ -85,6 +86,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     domain/src/shell/line_editor.cpp
     domain/src/shell/command_dispatcher.cpp
     domain/src/shell/shell_engine.cpp
+    domain/src/shell/commands/version_command.cpp
     bsp/src/board.cpp
     bsp/src/cortex/axi_sram_nocache_mpu.cpp
     bsp/src/gpio.cpp
