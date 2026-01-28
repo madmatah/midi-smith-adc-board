@@ -1,6 +1,7 @@
 #include "shell/command_parser.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <string>
 
 TEST_CASE("The CommandParser class", "[shell]") {
   SECTION("The ParseInPlace() method") {
