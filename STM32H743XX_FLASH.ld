@@ -56,7 +56,8 @@ ENTRY(Reset_Handler)
 MEMORY
 {
 DTCMRAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
-RAM (xrw)      : ORIGIN = 0x24000000, LENGTH = 512K
+AXI_SRAM_NOCACHE (xrw) : ORIGIN = 0x24000000, LENGTH = 8K
+AXI_SRAM (xrw)         : ORIGIN = 0x24002000, LENGTH = 504K
 RAM_D2 (xrw)      : ORIGIN = 0x30000000, LENGTH = 288K
 RAM_D3 (xrw)      : ORIGIN = 0x38000000, LENGTH = 64K
 ITCMRAM (xrw)      : ORIGIN = 0x00000000, LENGTH = 64K
@@ -213,12 +214,22 @@ SECTIONS
   PROVIDE( __arm32_tls_tcb_offset = MAX(8, __tls_align) );
   PROVIDE( __arm64_tls_tcb_offset = MAX(16, __tls_align) );
 
+  .axi_sram_nocache (NOLOAD) : ALIGN(32)
+  {
+    . = ALIGN(32);
+    __axi_sram_nocache_start__ = .;
+    *(.axi_sram_nocache)
+    *(.axi_sram_nocache*)
+    . = ALIGN(32);
+    __axi_sram_nocache_end__ = .;
+  } >AXI_SRAM_NOCACHE
+
   .rtt (NOLOAD) : ALIGN(4)
   {
     *(.rtt)
     *(.rtt*)
     . = ALIGN(4);
-  } >RAM
+  } >AXI_SRAM
 
   .bss (NOLOAD) : ALIGN(4)
   {

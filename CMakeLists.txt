@@ -42,6 +42,10 @@ if(HOST_TESTS)
     add_library(domain STATIC)
     target_sources(domain PRIVATE
         domain/src/math.cpp
+        domain/src/shell/command_parser.cpp
+        domain/src/shell/line_editor.cpp
+        domain/src/shell/command_dispatcher.cpp
+        domain/src/shell/shell_engine.cpp
     )
     target_include_directories(domain PUBLIC
         domain/include
@@ -72,10 +76,17 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     app/src/application.cpp
     app/src/app_entry.cpp
     app/src/tasks/test_task.cpp
+    app/src/tasks/shell_task.cpp
+    domain/src/shell/command_parser.cpp
+    domain/src/shell/line_editor.cpp
+    domain/src/shell/command_dispatcher.cpp
+    domain/src/shell/shell_engine.cpp
     bsp/src/board.cpp
+    bsp/src/cortex/axi_sram_nocache_mpu.cpp
     bsp/src/gpio.cpp
     bsp/src/rtt_logger.cpp
     bsp/src/rtt_telemetry_sender.cpp
+    bsp/src/serial/uart_stream_registry.cpp
     Third_Party/SEGGER/RTT/RTT/SEGGER_RTT.c
     Third_Party/SEGGER/RTT/RTT/SEGGER_RTT_printf.c
     os/src/clock.cpp

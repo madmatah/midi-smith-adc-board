@@ -1,11 +1,12 @@
 #include "bsp/board.hpp"
 
-#include "main.h"
+#include "bsp/cortex/axi_sram_nocache_mpu.hpp"
 
 namespace bsp {
 
-
-void Board::init() noexcept {}
+void Board::init() noexcept {
+  bsp::cortex::AxiSramNoCacheMpu::ConfigureRegion();
+}
 
 
 }  // namespace bsp
