@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint_and_format_check:
+    name: Lint + format-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build clang-format python3-pip
+
+      - name: Install cpplint
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install cpplint
+
+      - name: Cache CMake FetchContent (_deps)
+        uses: actions/cache@v4
+        with:
+          path: build/Host-Debug/_deps
+          key: ${{ runner.os }}-cmake-deps-host-${{ hashFiles('CMakePresets.json', '**/CMakeLists.txt', 'cmake/**/*.cmake') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-deps-host-
+
+      - name: Configure (Host-Debug)
+        run: cmake --preset Host-Debug
+
+      - name: Lint (cpplint)
+        run: cmake --build --preset Host-Debug --target lint
+
+      - name: Format check (clang-format)
+        run: |
+          files="$(
+            git ls-files \
+              'app/**/*.c' 'app/**/*.cpp' 'app/**/*.h' 'app/**/*.hpp' \
+              'bsp/**/*.c' 'bsp/**/*.cpp' 'bsp/**/*.h' 'bsp/**/*.hpp' \
+              'domain/**/*.c' 'domain/**/*.cpp' 'domain/**/*.h' 'domain/**/*.hpp' \
+              'os/**/*.c' 'os/**/*.cpp' 'os/**/*.h' 'os/**/*.hpp' \
+              'tests/**/*.c' 'tests/**/*.cpp' 'tests/**/*.h' 'tests/**/*.hpp'
+          )"
+
+          if [ -n "$files" ]; then
+            echo "$files" | xargs clang-format --dry-run --Werror
+          fi
+
+  host_tests:
+    name: Host tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build git
+
+      - name: Cache CMake FetchContent (_deps)
+        uses: actions/cache@v4
+        with:
+          path: build/Host-Debug/_deps
+          key: ${{ runner.os }}-cmake-deps-host-${{ hashFiles('CMakePresets.json', '**/CMakeLists.txt', 'cmake/**/*.cmake') }}
+          restore-keys: |
+            ${{ runner.os }}-cmake-deps-host-
+
+      - name: Configure (Host-Debug)
+        run: cmake --preset Host-Debug
+
+      - name: Build unit tests
+        run: cmake --build --preset Host-Debug --target unit_tests
+
+      - name: Run tests
+        run: ctest --test-dir build/Host-Debug --output-on-failure
+
+  firmware_release_build:
+    name: Build firmware
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools + ARM GCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build \
+            gcc-arm-none-eabi binutils-arm-none-eabi \
+            libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+
+      - name: Configure (Release)
+        run: cmake --preset Release
+
+      - name: Build (Release)
+        run: cmake --build --preset Release
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-release
+          if-no-files-found: error
+          path: |
+            build/Release/adc-board.elf
+            build/Release/adc-board.map
