@@ -47,7 +47,7 @@ class StreamStub : public domain::io::StreamRequirements {
 
 class TestCommand : public shell::CommandRequirements {
  public:
-  TestCommand(const char* name) : _name(name) {}
+  explicit TestCommand(const char* name) : _name(name) {}
 
   std::string_view Name() const noexcept override {
     return _name;

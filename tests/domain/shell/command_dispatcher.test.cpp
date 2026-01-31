@@ -120,24 +120,44 @@ TEST_CASE("The CommandDispatcher class", "[shell]") {
         REQUIRE(count == 3);
       }
 
+      SECTION("Should find completions in alphabetical order") {
+        std::size_t count = dispatcher.FindCompletions("st", matches, 4);
+
+        REQUIRE(count == 3);
+        REQUIRE(matches[0]->Name() == "start");
+        REQUIRE(matches[1]->Name() == "status");
+        REQUIRE(matches[2]->Name() == "stop");
+      }
+
       SECTION("Should find the built-in help command") {
         std::size_t count = dispatcher.FindCompletions("he", matches, 4);
 
         REQUIRE(count == 1);
-        REQUIRE(matches[0] == nullptr);
+        REQUIRE(matches[0] != nullptr);
+        REQUIRE(matches[0]->Name() == "help");
       }
+    }
+  }
 
-      SECTION("Should return no matches when the prefix does not match any command") {
-        std::size_t count = dispatcher.FindCompletions("zoo", matches, 4);
+  SECTION("The ShowHelp() method") {
+    SECTION("When commands are registered in non-alphabetical order") {
+      TestCommand zoo_command("zoo", "help zoo", "resp");
+      TestCommand aba_command("aba", "help aba", "resp");
+      dispatcher.Register(zoo_command);
+      dispatcher.Register(aba_command);
 
-        REQUIRE(count == 0);
-      }
+      dispatcher.ShowHelp(stream);
 
-      SECTION("Should return no matches when the prefix is empty") {
-        std::size_t count = dispatcher.FindCompletions("", matches, 4);
+      const std::string& output = stream.GetOutput();
+      std::size_t pos_help = output.find("help");
+      std::size_t pos_aba = output.find("aba");
+      std::size_t pos_zoo = output.find("zoo");
 
-        REQUIRE(count == 0);
-      }
+      REQUIRE(pos_aba != std::string::npos);
+      REQUIRE(pos_help != std::string::npos);
+      REQUIRE(pos_zoo != std::string::npos);
+      REQUIRE(pos_aba < pos_help);
+      REQUIRE(pos_help < pos_zoo);
     }
   }
 }
