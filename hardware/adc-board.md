@@ -186,8 +186,8 @@ The 22 sensor channels are routed to the internal Analog-to-Digital Converters (
 | **SEN8** | 40 | **PA4** | ADC1/2 | INP18 |
 | **SEN9** | 37 | **PA3** | ADC1/2 | INP15 |
 | **SEN10** | 36 | **PA2** | ADC1/2 | INP14 |
-| **SEN11** | 35 | **PA1** | ADC1/2 | INP17 |
-| **SEN12** | 34 | **PA0** | ADC1/2 | INP16 |
+| **SEN11** | 35 | **PA1** | ADC1 | INP17 |
+| **SEN12** | 34 | **PA0** | ADC1 | INP16 |
 | **SEN13** | 21 | **PF9** | ADC3 | INP2 |
 | **SEN14** | 22 | **PF10** | ADC3 | INP6 |
 | **SEN15** | 27 | **PC1** | ADC1/2/3 | INP11 |
