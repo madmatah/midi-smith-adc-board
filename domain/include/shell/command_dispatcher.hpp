@@ -46,6 +46,32 @@ class CommandDispatcher {
     out.Write("\r\n");
   }
 
+  std::size_t FindCompletions(std::string_view prefix, CommandRequirements** matches,
+                              std::size_t max_matches) const noexcept {
+    if (prefix.empty()) {
+      return 0;
+    }
+
+    std::size_t found = 0;
+
+    if (std::string_view("help").compare(0, prefix.length(), prefix) == 0) {
+      if (found < max_matches) {
+        matches[found++] = nullptr;
+      }
+    }
+
+    for (std::size_t i = 0; i < _count; ++i) {
+      std::string_view name = _commands[i]->Name();
+      if (name.compare(0, prefix.length(), prefix) == 0) {
+        if (found < max_matches) {
+          matches[found++] = _commands[i];
+        }
+      }
+    }
+
+    return found;
+  }
+
   void ShowHelp(domain::io::WritableStreamRequirements& out) const noexcept {
     out.Write("Available commands:\r\n");
     out.Write("  help                Show this help message\r\n");

@@ -96,4 +96,48 @@ TEST_CASE("The CommandDispatcher class", "[shell]") {
       REQUIRE(stream.GetOutput().find("error: command not found") != std::string::npos);
     }
   }
+
+  SECTION("The FindCompletions() method") {
+    SECTION("When the shell has several commands registered") {
+      TestCommand status_command("status", "help", "response");
+      TestCommand start_command("start", "help", "response");
+      TestCommand stop_command("stop", "help", "response");
+      dispatcher.Register(status_command);
+      dispatcher.Register(start_command);
+      dispatcher.Register(stop_command);
+      shell::CommandRequirements* matches[4];
+
+      SECTION("Should find a unique completion when the prefix is unambiguous") {
+        std::size_t count = dispatcher.FindCompletions("stat", matches, 4);
+
+        REQUIRE(count == 1);
+        REQUIRE(matches[0] == &status_command);
+      }
+
+      SECTION("Should find multiple completions when the prefix is ambiguous") {
+        std::size_t count = dispatcher.FindCompletions("st", matches, 4);
+
+        REQUIRE(count == 3);
+      }
+
+      SECTION("Should find the built-in help command") {
+        std::size_t count = dispatcher.FindCompletions("he", matches, 4);
+
+        REQUIRE(count == 1);
+        REQUIRE(matches[0] == nullptr);
+      }
+
+      SECTION("Should return no matches when the prefix does not match any command") {
+        std::size_t count = dispatcher.FindCompletions("zoo", matches, 4);
+
+        REQUIRE(count == 0);
+      }
+
+      SECTION("Should return no matches when the prefix is empty") {
+        std::size_t count = dispatcher.FindCompletions("", matches, 4);
+
+        REQUIRE(count == 0);
+      }
+    }
+  }
 }

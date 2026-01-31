@@ -27,9 +27,13 @@ class ShellEngine {
     _config.prompt = prompt;
   }
 
+  bool RegisterCommand(CommandRequirements& command) noexcept {
+    return _dispatcher.Register(command);
+  }
+
   bool Poll() noexcept {
     bool line_ready = false;
-    bool did_rx = _editor.Poll(_stream, _stream, line_ready);
+    bool did_rx = _editor.Poll(_stream, _stream, line_ready, OnCompletion, this);
 
     if (line_ready) {
       char* line = _editor.GetLine();
@@ -50,9 +54,63 @@ class ShellEngine {
     return did_rx;
   }
 
-  bool RegisterCommand(CommandRequirements& command) noexcept {
-    return _dispatcher.Register(command);
+ private:
+  static void OnCompletion(char* buffer, std::size_t& cursor, std::size_t max_size,
+                           domain::io::WritableStreamRequirements& writer,
+                           void* user_data) noexcept {
+    auto* self = static_cast<ShellEngine*>(user_data);
+    self->HandleCompletion(buffer, cursor, max_size, writer);
   }
+
+  void HandleCompletion(char* buffer, std::size_t& cursor, std::size_t max_size,
+                        domain::io::WritableStreamRequirements& writer) noexcept {
+    if (IsCompletingArgument(buffer, cursor)) {
+      return;
+    }
+
+    buffer[cursor] = '\0';
+    std::string_view prefix(buffer);
+
+    CommandRequirements* matches[kMaxCommands];
+    std::size_t count = _dispatcher.FindCompletions(prefix, matches, kMaxCommands);
+
+    if (count == 1) {
+      std::string_view name = matches[0] ? matches[0]->Name() : "help";
+      std::string_view remaining = name.substr(prefix.length());
+
+      for (char c : remaining) {
+        if (cursor < max_size - 1) {
+          buffer[cursor++] = c;
+          writer.Write(c);
+        }
+      }
+
+      if (cursor < max_size - 1) {
+        buffer[cursor++] = ' ';
+        writer.Write(' ');
+      }
+      buffer[cursor] = '\0';
+    } else if (count > 1) {
+      writer.Write("\r\n");
+      for (std::size_t i = 0; i < count; ++i) {
+        writer.Write(matches[i] ? matches[i]->Name().data() : "help");
+        writer.Write("  ");
+      }
+      writer.Write("\r\n");
+      ShowPrompt();
+      writer.Write(std::string_view(buffer, cursor));
+    }
+  }
+
+  bool IsCompletingArgument(const char* buffer, std::size_t cursor) const noexcept {
+    for (std::size_t i = 0; i < cursor; ++i) {
+      if (buffer[i] == ' ') {
+        return true;
+      }
+    }
+    return false;
+  }
+
 
  private:
   void ShowPrompt() noexcept {

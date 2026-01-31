@@ -15,15 +15,20 @@ class LineEditor {
     _buffer[0] = '\0';
   }
 
+  using CompletionCallback = void (*)(char* buffer, std::size_t& cursor, std::size_t max_size,
+                                      domain::io::WritableStreamRequirements& writer,
+                                      void* user_data);
+
   bool Poll(domain::io::ReadableStreamRequirements& reader,
-            domain::io::WritableStreamRequirements& writer, bool& line_ready) noexcept {
+            domain::io::WritableStreamRequirements& writer, bool& line_ready,
+            CompletionCallback on_completion = nullptr, void* user_data = nullptr) noexcept {
     std::uint8_t byte;
     bool did_rx = false;
     line_ready = false;
 
     while (reader.Read(byte) == domain::io::ReadResult::kOk) {
       did_rx = true;
-      if (ProcessByte(byte, writer)) {
+      if (ProcessByte(byte, writer, on_completion, user_data)) {
         line_ready = true;
       }
     }
@@ -42,7 +47,8 @@ class LineEditor {
   }
 
  private:
-  bool ProcessByte(std::uint8_t byte, domain::io::WritableStreamRequirements& stream) noexcept {
+  bool ProcessByte(std::uint8_t byte, domain::io::WritableStreamRequirements& stream,
+                   CompletionCallback on_completion, void* user_data) noexcept {
     if (byte == '\r' || byte == '\n') {
       const bool is_crlf_pair = _last_was_newline && (byte != _last_newline);
       _last_newline = byte;
@@ -64,6 +70,13 @@ class LineEditor {
 
     _last_was_newline = false;
 
+    if (byte == 0x09) {
+      if (on_completion) {
+        on_completion(_buffer, _cursor, kBufferSize, stream, user_data);
+      }
+      return false;
+    }
+
     if (byte == '\b' || byte == 0x7f) {
       if (_cursor > 0) {
         _cursor--;
@@ -72,7 +85,7 @@ class LineEditor {
       return false;
     }
 
-    // Printable characters
+
     if (byte >= 32 && byte <= 126) {
       if (_cursor < kBufferSize - 1) {
         _buffer[_cursor++] = static_cast<char>(byte);
