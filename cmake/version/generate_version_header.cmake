@@ -5,8 +5,9 @@ if(NOT DEFINED OUTPUT_HEADER)
 endif()
 
 if(NOT DEFINED SOURCE_DIR)
-  set(SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
+  get_filename_component(SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 endif()
+get_filename_component(SOURCE_DIR "${SOURCE_DIR}" ABSOLUTE)
 
 if(NOT DEFINED VERSION_BUILD_TYPE)
   set(VERSION_BUILD_TYPE "unknown")
