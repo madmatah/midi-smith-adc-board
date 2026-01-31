@@ -28,10 +28,18 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${TARGET_FLAGS}")
 set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS} -x assembler-with-cpp -MMD -MP")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fdata-sections -ffunction-sections")
 
+option(FORCE_DEBUG_SYMBOLS "Force debug symbols even in Release mode" OFF)
+
+if(FORCE_DEBUG_SYMBOLS)
+    set(RELEASE_DEBUG_FLAGS "-g3")
+else()
+    set(RELEASE_DEBUG_FLAGS "-g0")
+endif()
+
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g3")
-set(CMAKE_C_FLAGS_RELEASE "-Os -g0")
+set(CMAKE_C_FLAGS_RELEASE "-Os ${RELEASE_DEBUG_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
-set(CMAKE_CXX_FLAGS_RELEASE "-Os -g0")
+set(CMAKE_CXX_FLAGS_RELEASE "-Os ${RELEASE_DEBUG_FLAGS}")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fno-rtti -fno-exceptions -fno-threadsafe-statics")
 

@@ -116,3 +116,56 @@ jobs:
           path: |
             build/Release/adc-board.elf
             build/Release/adc-board.map
+
+  firmware_size_analysis:
+    name: Firmware size analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Install tools + ARM GCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build \
+            gcc-arm-none-eabi binutils-arm-none-eabi \
+            libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          path: pr
+
+      - name: Build PR
+        working-directory: pr
+        run: |
+          cmake --preset Release -DFORCE_DEBUG_SYMBOLS=ON
+          cmake --build --preset Release | tee build_output.txt
+          cp build/Release/adc-board.elf ../pr.elf
+
+          echo "## 📊 Memory Usage (PR Branch)" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          # Extract from 'Memory region' to the line with 'FLASH'
+          sed -n '/Memory region/,/FLASH/p' build_output.txt >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Bloaty Size Analysis" >> $GITHUB_STEP_SUMMARY
+
+      - name: Checkout Base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - name: Build Base
+        working-directory: base
+        run: |
+          cmake --preset Release -DFORCE_DEBUG_SYMBOLS=ON
+          cmake --build --preset Release
+          cp build/Release/adc-board.elf ../base.elf
+
+      - name: Run Bloaty
+        uses: carlosperate/bloaty-action@v1
+        with:
+          bloaty-args: pr.elf -- base.elf
+          output-to-summary: true
+          summary-title: "Memory Impact Report (vs ${{ github.base_ref }})"
