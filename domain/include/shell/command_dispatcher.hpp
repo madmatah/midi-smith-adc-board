@@ -1,24 +1,35 @@
 #pragma once
 
 #include <cstddef>
-#include <cstring>
 #include <string_view>
 
 #include "domain/io/stream_requirements.hpp"
 #include "shell/command_requirements.hpp"
+#include "shell/commands/help_command.hpp"
+#include "shell/help_provider.hpp"
 
 namespace shell {
 
 template <std::size_t kMaxCommands>
-class CommandDispatcher {
+class CommandDispatcher : public HelpProvider {
  public:
-  CommandDispatcher() noexcept : _count(0) {}
+  CommandDispatcher() noexcept : help_command_(*this), count_(0) {
+    Register(help_command_);
+  }
 
   bool Register(CommandRequirements& command) noexcept {
-    if (_count >= kMaxCommands) {
+    if (count_ >= kMaxCommands) {
       return false;
     }
-    _commands[_count++] = &command;
+
+    std::size_t i = count_;
+    while (i > 0 && command.Name() < commands_[i - 1]->Name()) {
+      commands_[i] = commands_[i - 1];
+      i--;
+    }
+    commands_[i] = &command;
+    count_++;
+
     return true;
   }
 
@@ -29,14 +40,9 @@ class CommandDispatcher {
 
     std::string_view cmd_name(argv[0]);
 
-    if (cmd_name == "help") {
-      ShowHelp(out);
-      return;
-    }
-
-    for (std::size_t i = 0; i < _count; ++i) {
-      if (cmd_name == _commands[i]->Name()) {
-        _commands[i]->Run(argc, argv, out);
+    for (std::size_t i = 0; i < count_; ++i) {
+      if (cmd_name == commands_[i]->Name()) {
+        commands_[i]->Run(argc, argv, out);
         return;
       }
     }
@@ -54,17 +60,11 @@ class CommandDispatcher {
 
     std::size_t found = 0;
 
-    if (std::string_view("help").compare(0, prefix.length(), prefix) == 0) {
-      if (found < max_matches) {
-        matches[found++] = nullptr;
-      }
-    }
-
-    for (std::size_t i = 0; i < _count; ++i) {
-      std::string_view name = _commands[i]->Name();
+    for (std::size_t i = 0; i < count_; ++i) {
+      std::string_view name = commands_[i]->Name();
       if (name.compare(0, prefix.length(), prefix) == 0) {
         if (found < max_matches) {
-          matches[found++] = _commands[i];
+          matches[found++] = commands_[i];
         }
       }
     }
@@ -72,28 +72,32 @@ class CommandDispatcher {
     return found;
   }
 
-  void ShowHelp(domain::io::WritableStreamRequirements& out) const noexcept {
+  void ShowHelp(domain::io::WritableStreamRequirements& out) const noexcept override {
     out.Write("Available commands:\r\n");
-    out.Write("  help                Show this help message\r\n");
-    for (std::size_t i = 0; i < _count; ++i) {
+    for (std::size_t i = 0; i < count_; ++i) {
       out.Write("  ");
-      std::string_view name = _commands[i]->Name();
+      std::string_view name = commands_[i]->Name();
       out.Write(name);
 
-      // Pad with spaces for alignment
-      const std::size_t kNameColumnWidth = 20;
-      for (std::size_t j = name.length(); j < kNameColumnWidth; ++j) {
-        out.Write(' ');
-      }
+      WritePadding(out, name.length());
 
-      out.Write(_commands[i]->Help());
+      out.Write(commands_[i]->Help());
       out.Write("\r\n");
     }
   }
 
  private:
-  CommandRequirements* _commands[kMaxCommands];
-  std::size_t _count;
+  void WritePadding(domain::io::WritableStreamRequirements& out,
+                    std::size_t name_length) const noexcept {
+    const std::size_t kNameColumnWidth = 20;
+    for (std::size_t j = name_length; j < kNameColumnWidth; ++j) {
+      out.Write(' ');
+    }
+  }
+
+  commands::HelpCommand help_command_;
+  CommandRequirements* commands_[kMaxCommands];
+  std::size_t count_;
 };
 
 }  // namespace shell
