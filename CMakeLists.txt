@@ -41,7 +41,6 @@ if(HOST_TESTS)
 
     add_library(domain STATIC)
     target_sources(domain PRIVATE
-        domain/src/math.cpp
         domain/src/shell/command_parser.cpp
         domain/src/shell/line_editor.cpp
         domain/src/shell/command_dispatcher.cpp
@@ -81,10 +80,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     app/src/app_entry.cpp
     app/src/version.cpp
     app/src/composition/analog_subsystem.cpp
-    app/src/composition/test_subsystem.cpp
     app/src/composition/shell_subsystem.cpp
     app/src/composition/sensor_rtt_telemetry_subsystem.cpp
-    app/src/tasks/test_task.cpp
     app/src/tasks/shell_task.cpp
     app/src/tasks/analog_acquisition_task.cpp
     app/src/tasks/sensor_rtt_telemetry_task.cpp

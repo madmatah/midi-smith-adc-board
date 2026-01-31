@@ -20,7 +20,6 @@ void Application::create_tasks() noexcept {
   alignas(32) BSP_AXI_SRAM_NOCACHE static bsp::serial::UartStream<256, 1024> console_stream(huart1);
   (void) console_stream.StartRxDma();
 
-  app::composition::LoggingContext logging{logger};
   app::composition::ConsoleContext console{console_stream};
 
   app::composition::AdcControlContext adc_control = app::composition::CreateAnalogSubsystem();
@@ -29,7 +28,6 @@ void Application::create_tasks() noexcept {
 
   app::composition::SensorRttTelemetryControlContext sensor_rtt =
       app::composition::CreateSensorRttTelemetrySubsystem(sensors, adc_state);
-  // app::composition::CreateTestSubsystem(logging);
   app::composition::CreateShellSubsystem(console, adc_control, sensors, sensor_rtt);
 }
 

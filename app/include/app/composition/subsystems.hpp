@@ -37,10 +37,8 @@ AdcControlContext CreateAnalogSubsystem() noexcept;
 AdcStateContext CreateAdcStateContext() noexcept;
 SensorsContext CreateSensorsContext() noexcept;
 
-
 SensorRttTelemetryControlContext CreateSensorRttTelemetrySubsystem(
     SensorsContext& sensors, AdcStateContext& adc_state) noexcept;
-void CreateTestSubsystem(LoggingContext& logging) noexcept;
 void CreateShellSubsystem(ConsoleContext& console, AdcControlContext& adc_control,
                           SensorsContext& sensors,
                           SensorRttTelemetryControlContext& sensor_rtt) noexcept;
