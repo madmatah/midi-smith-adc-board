@@ -69,6 +69,10 @@ void Error_Handler(void);
 #define SEN18_GPIO_Port GPIOF
 #define SEN19_Pin GPIO_PIN_8
 #define SEN19_GPIO_Port GPIOF
+#define SEN13_Pin GPIO_PIN_9
+#define SEN13_GPIO_Port GPIOF
+#define SEN14_Pin GPIO_PIN_10
+#define SEN14_GPIO_Port GPIOF
 #define SEN16_Pin GPIO_PIN_0
 #define SEN16_GPIO_Port GPIOC
 #define SEN15_Pin GPIO_PIN_1
@@ -97,10 +101,6 @@ void Error_Handler(void);
 #define SEN2_GPIO_Port GPIOB
 #define SEN1_Pin GPIO_PIN_1
 #define SEN1_GPIO_Port GPIOB
-#define SEN13_Pin GPIO_PIN_13
-#define SEN13_GPIO_Port GPIOF
-#define SEN14_Pin GPIO_PIN_14
-#define SEN14_GPIO_Port GPIOF
 #define TIA_SHDN_Pin GPIO_PIN_0
 #define TIA_SHDN_GPIO_Port GPIOG
 #define CAN_STB_Pin GPIO_PIN_9
