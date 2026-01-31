@@ -1,6 +1,6 @@
 #include "app/tasks/test_task.hpp"
 
-#include "app/config.hpp"
+#include "app/config/config.hpp"
 #include "app/logging/logger_requirements.hpp"
 #include "app/telemetry/telemetry_sender_requirements.hpp"
 #include "app/version.hpp"

@@ -27,6 +27,13 @@
                         "port": 0,
                         "type": "console",
                         "label": "RTT"
+                    },
+                    {
+                        "port": 1,
+                        "type": "graph",
+                        "encoding": "unsigned",
+                        "graphId": "sensor",
+                        "label": "Sensor"
                     }
                 ]
             },

@@ -80,8 +80,14 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     app/src/application.cpp
     app/src/app_entry.cpp
     app/src/version.cpp
+    app/src/composition/analog_subsystem.cpp
+    app/src/composition/test_subsystem.cpp
+    app/src/composition/shell_subsystem.cpp
+    app/src/composition/sensor_rtt_telemetry_subsystem.cpp
     app/src/tasks/test_task.cpp
     app/src/tasks/shell_task.cpp
+    app/src/tasks/analog_acquisition_task.cpp
+    app/src/tasks/sensor_rtt_telemetry_task.cpp
     domain/src/shell/command_parser.cpp
     domain/src/shell/line_editor.cpp
     domain/src/shell/command_dispatcher.cpp
@@ -89,10 +95,17 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     domain/src/shell/commands/version_command.cpp
     bsp/src/board.cpp
     bsp/src/cortex/axi_sram_nocache_mpu.cpp
+    bsp/src/cortex/d3_sram_nocache_mpu.cpp
+    bsp/src/adc/adc_dma.cpp
+    bsp/src/adc/adc_dma_callbacks.cpp
+    bsp/src/time/tim2_timestamp_counter.cpp
     bsp/src/gpio.cpp
+    bsp/src/pins.cpp
     bsp/src/rtt_logger.cpp
     bsp/src/rtt_telemetry_sender.cpp
     bsp/src/serial/uart_stream_registry.cpp
+    app/src/shell/commands/adc_command.cpp
+    app/src/shell/commands/sensor_rtt_command.cpp
     Third_Party/SEGGER/RTT/RTT/SEGGER_RTT.c
     Third_Party/SEGGER/RTT/RTT/SEGGER_RTT_printf.c
     os/src/clock.cpp

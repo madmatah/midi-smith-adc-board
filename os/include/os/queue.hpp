@@ -36,6 +36,13 @@ class Queue : public QueueRequirements<T> {
     return osMessageQueuePut(id_, &item, 0, timeout_ms) == osOK;
   }
 
+  bool SendFromIsr(const T& item) noexcept {
+    if (id_ == nullptr) {
+      return false;
+    }
+    return osMessageQueuePut(id_, &item, 0, 0) == osOK;
+  }
+
   bool Receive(T& item, uint32_t timeout_ms) noexcept override {
     if (id_ == nullptr) {
       return false;

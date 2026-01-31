@@ -6,10 +6,6 @@
 #include "domain/io/stream_requirements.hpp"
 #include "stm32h7xx_hal.h"
 
-#ifndef BSP_AXI_SRAM_NOCACHE
-#define BSP_AXI_SRAM_NOCACHE __attribute__((section(".axi_sram_nocache")))
-#endif
-
 namespace bsp::serial {
 
 class UartStreamBase {

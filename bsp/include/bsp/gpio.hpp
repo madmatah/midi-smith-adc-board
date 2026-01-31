@@ -8,15 +8,14 @@ namespace bsp {
 
 class Gpio : public GpioRequirements {
  public:
+  explicit Gpio(std::uintptr_t port, std::uint16_t pin) noexcept : _port(port), _pin(pin) {}
+
   void set() noexcept override;
   void reset() noexcept override;
   void toggle() noexcept override;
   bool read() const noexcept override;
 
  private:
-  friend class Board;
-  explicit Gpio(std::uintptr_t port, std::uint16_t pin) noexcept : _port(port), _pin(pin) {}
-
   std::uintptr_t _port;
   std::uint16_t _pin;
 };
