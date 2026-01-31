@@ -224,6 +224,16 @@ SECTIONS
     __axi_sram_nocache_end__ = .;
   } >AXI_SRAM_NOCACHE
 
+  .d3_sram_nocache (NOLOAD) : ALIGN(32)
+  {
+    . = ALIGN(32);
+    __d3_sram_nocache_start__ = .;
+    *(.d3_sram_nocache)
+    *(.d3_sram_nocache*)
+    . = ALIGN(32);
+    __d3_sram_nocache_end__ = .;
+  } >RAM_D3
+
   .rtt (NOLOAD) : ALIGN(4)
   {
     *(.rtt)

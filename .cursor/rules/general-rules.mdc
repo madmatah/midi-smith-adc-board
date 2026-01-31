@@ -293,7 +293,14 @@ Avoid `new`/`delete` inside classes. Use static allocation or placement new duri
 
 **— The Composition Root pattern is centralized**
 
-All object instantiation and wiring happens in one place: `Application.cpp`. This is the only place allowed to know concrete BSP classes.
+All object instantiation and wiring happens in the Composition Root.
+
+The Composition Root may be split across multiple files for readability, but it must remain clearly scoped:
+- `app/src/application.cpp`
+- `app/src/composition/*.cpp`
+- `app/include/app/composition/*.hpp`
+
+Only Composition Root files are allowed to know concrete BSP classes and perform wiring.
 
 #### Example: Interface Definition
 
@@ -346,6 +353,46 @@ void Application::boot() {
     ledTask.start();
 }
 ```
+
+### 4.2.1 Composition Root & Subsystems (Project Convention)
+
+**— Goal**
+
+Keep `Application::create_tasks()` readable by delegating wiring to small subsystem composers while preserving explicit dependencies and avoiding “passe-plat” contexts.
+
+**— Subsystem composition**
+
+- Each subsystem gets a dedicated composer file:
+  - `app/src/composition/<name>_subsystem.cpp`
+- Public entry points live in:
+  - `app/include/app/composition/subsystems.hpp`
+- Each function is a small “composition unit” (wires concrete implementations and starts tasks).
+
+**— Common dependencies and the anti “passe-plat” rule**
+
+- Do not introduce a single “mega context” passed everywhere (e.g. `AppContext` with dozens of fields).
+- Prefer minimal “capability contexts” that expose only one concern, e.g.:
+  - `LoggingContext { LoggerRequirements& }`
+  - `ConsoleContext { StreamRequirements& }`
+- A subsystem must only accept the contexts it truly needs.
+- Avoid service locators / global “registry” access from production code; dependencies must remain visible at the call site.
+
+**— Allowed dependencies inside composers**
+
+- Composition files may include concrete BSP headers and do placement-new/static allocation required by the embedded constraints.
+- Non-composition code (tasks, domain, services) must depend on `*Requirements` interfaces, not concrete BSP classes.
+
+**— Cross-subsystem dependencies**
+
+- Subsystems should not depend on each other directly.
+- If two subsystems share a dependency (e.g. a logger), it is created once in the Composition Root and passed via a minimal context.
+
+**— Configuration-driven wiring**
+
+- Configuration headers under `app/include/app/config_*.hpp` should stay “data-only” (what a human edits).
+- Compile-time validation should live in a dedicated companion header:
+  - `app/include/app/<config>_validation.hpp`
+- Validation headers must be included by the relevant subsystem composer (or `application.cpp`) so invalid configs fail the build early.
 
 ### 4.3 Application Layer (App/)
 
@@ -421,9 +468,16 @@ Tasks, queues, mutexes, timers abstracted.
 
 ### 4.7 Configuration Management
 
-**— Configuration is centralized in Config.hpp**
+**— Configuration is centralized and discoverable**
 
-Avoid scattered `#define` across multiple files.
+- `app/include/app/config/config.hpp` is the global application configuration (shared defaults, task stack/priorities, system-wide constants).
+- Subsystem-specific configuration lives in dedicated headers:
+  - `app/include/app/config/*.hpp`
+  - Compatibility forwarders may exist at `app/include/app/config_*.hpp` for include stability.
+- `config_*.hpp` files should be data-only (human-edited values).
+- Compile-time validation should live in a dedicated companion header:
+  - `app/include/app/config/*_validation.hpp`
+- Avoid scattered `#define` across multiple files; prefer `constexpr` constants in the configuration headers.
 
 **— Hardware-specific configuration is separated from logic**
 

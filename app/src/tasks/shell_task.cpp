@@ -1,13 +1,13 @@
 #include "app/tasks/shell_task.hpp"
 
-#include "app/config.hpp"
+#include "app/config/config.hpp"
 #include "os/clock.hpp"
 #include "os/task.hpp"
 
 namespace app::Tasks {
 
 ShellTask::ShellTask(domain::io::StreamRequirements& stream,
-                     const shell::ShellConfig& config) noexcept
+                     const ::shell::ShellConfig& config) noexcept
     : _engine(stream, config) {}
 
 void ShellTask::entry(void* ctx) noexcept {

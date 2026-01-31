@@ -8,13 +8,13 @@ namespace app::Tasks {
 class ShellTask {
  public:
   explicit ShellTask(domain::io::StreamRequirements& stream,
-                     const shell::ShellConfig& config) noexcept;
+                     const ::shell::ShellConfig& config) noexcept;
 
   static void entry(void* ctx) noexcept;
   void run() noexcept;
   bool start() noexcept;
 
-  bool RegisterCommand(shell::CommandRequirements& command) noexcept {
+  bool RegisterCommand(::shell::CommandRequirements& command) noexcept {
     return _engine.RegisterCommand(command);
   }
 
@@ -23,7 +23,7 @@ class ShellTask {
   static constexpr std::size_t kMaxCommands = 16;
   static constexpr std::size_t kMaxArgs = 8;
 
-  shell::ShellEngine<kLineBufferSize, kMaxCommands, kMaxArgs> _engine;
+  ::shell::ShellEngine<kLineBufferSize, kMaxCommands, kMaxArgs> _engine;
 };
 
 }  // namespace app::Tasks

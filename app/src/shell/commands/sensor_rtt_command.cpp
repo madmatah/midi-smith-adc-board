@@ -1,0 +1,193 @@
+#include "app/shell/commands/sensor_rtt_command.hpp"
+
+#include <charconv>
+#include <cstdint>
+#include <string_view>
+#include <system_error>
+
+#include "app/config/config.hpp"
+
+namespace app::shell::commands {
+namespace {
+
+std::string_view Arg(int argc, char** argv, int index) noexcept {
+  if (argv == nullptr) {
+    return {};
+  }
+  if (index < 0 || index >= argc) {
+    return {};
+  }
+  if (argv[index] == nullptr) {
+    return {};
+  }
+  return std::string_view(argv[index]);
+}
+
+void WriteUsage(domain::io::WritableStreamRequirements& out) noexcept {
+  out.Write("usage: sensor_rtt <id> [hz|Nms]\r\n");
+  out.Write("       sensor_rtt off\r\n");
+  out.Write("       sensor_rtt status\r\n");
+}
+
+void WriteRejected(domain::io::WritableStreamRequirements& out) noexcept {
+  out.Write("error: request rejected\r\n");
+}
+
+void WriteOk(domain::io::WritableStreamRequirements& out) noexcept {
+  out.Write("ok\r\n");
+}
+
+void WriteUnknownSensorId(domain::io::WritableStreamRequirements& out) noexcept {
+  out.Write("error: unknown sensor id\r\n");
+}
+
+bool ParseUint32(std::string_view text, std::uint32_t& out_value) noexcept {
+  if (text.empty()) {
+    return false;
+  }
+  std::uint32_t value = 0;
+  const char* begin = text.data();
+  const char* end = begin + text.size();
+  const auto r = std::from_chars(begin, end, value);
+  if (r.ec != std::errc() || r.ptr != end) {
+    return false;
+  }
+  out_value = value;
+  return true;
+}
+
+bool ParsePeriodMsFromRateArg(std::string_view arg, std::uint32_t& out_period_ms) noexcept {
+  if (arg.empty()) {
+    return false;
+  }
+
+  if (arg.size() >= 2u && arg.substr(arg.size() - 2u) == "ms") {
+    std::uint32_t ms = 0;
+    if (!ParseUint32(arg.substr(0, arg.size() - 2u), ms)) {
+      return false;
+    }
+    out_period_ms = ms;
+    return true;
+  }
+
+  std::uint32_t hz = 0;
+  if (!ParseUint32(arg, hz)) {
+    return false;
+  }
+  if (hz == 0u) {
+    return false;
+  }
+  out_period_ms = (1000u + (hz / 2u)) / hz;
+  return true;
+}
+
+void WriteUint32(domain::io::WritableStreamRequirements& out, std::uint32_t value) noexcept {
+  char buf[16]{};
+  auto r = std::to_chars(buf, buf + sizeof(buf), value);
+  if (r.ec != std::errc()) {
+    return;
+  }
+  out.Write(std::string_view(buf, static_cast<std::size_t>(r.ptr - buf)));
+}
+
+struct SensorRttParsedCommand {
+  enum class Kind : std::uint8_t {
+    kOff = 0,
+    kStatus = 1,
+    kObserve = 2,
+  };
+
+  Kind kind{Kind::kStatus};
+  std::uint8_t sensor_id{0};
+  std::uint32_t period_ms{0};
+};
+
+void WriteStatus(domain::io::WritableStreamRequirements& out,
+                 const app::telemetry::SensorRttTelemetryStatus& status) noexcept {
+  if (!status.enabled) {
+    out.Write("off\r\n");
+    return;
+  }
+  out.Write("on id=");
+  WriteUint32(out, status.sensor_id);
+  out.Write(" period_ms=");
+  WriteUint32(out, status.period_ms);
+  out.Write("\r\n");
+}
+
+bool TryParseCommand(int argc, char** argv, SensorRttParsedCommand& parsed,
+                     domain::io::WritableStreamRequirements& out) noexcept {
+  const std::string_view op = Arg(argc, argv, 1);
+  if (op.empty()) {
+    WriteUsage(out);
+    return false;
+  }
+
+  if (op == "off") {
+    parsed.kind = SensorRttParsedCommand::Kind::kOff;
+    return true;
+  }
+
+  if (op == "status") {
+    parsed.kind = SensorRttParsedCommand::Kind::kStatus;
+    return true;
+  }
+
+  std::uint32_t sensor_id_u32 = 0;
+  if (!ParseUint32(op, sensor_id_u32) || sensor_id_u32 > 255u) {
+    WriteUsage(out);
+    return false;
+  }
+
+  parsed.kind = SensorRttParsedCommand::Kind::kObserve;
+  parsed.sensor_id = static_cast<std::uint8_t>(sensor_id_u32);
+  parsed.period_ms = app::config::RTT_TELEMETRY_SENSOR_PERIOD_MS;
+
+  const std::string_view rate_arg = Arg(argc, argv, 2);
+  if (rate_arg.empty()) {
+    return true;
+  }
+
+  if (!ParsePeriodMsFromRateArg(rate_arg, parsed.period_ms)) {
+    WriteUsage(out);
+    return false;
+  }
+  return true;
+}
+
+}  // namespace
+
+void SensorRttCommand::Run(int argc, char** argv,
+                           domain::io::WritableStreamRequirements& out) noexcept {
+  SensorRttParsedCommand parsed{};
+  if (!TryParseCommand(argc, argv, parsed, out)) {
+    return;
+  }
+
+  if (parsed.kind == SensorRttParsedCommand::Kind::kOff) {
+    if (!control_.RequestOff()) {
+      WriteRejected(out);
+      return;
+    }
+    WriteOk(out);
+    return;
+  }
+
+  if (parsed.kind == SensorRttParsedCommand::Kind::kStatus) {
+    WriteStatus(out, control_.GetStatus());
+    return;
+  }
+
+  if (registry_.FindById(parsed.sensor_id) == nullptr) {
+    WriteUnknownSensorId(out);
+    return;
+  }
+
+  if (!control_.RequestObserve(parsed.sensor_id, parsed.period_ms)) {
+    WriteRejected(out);
+    return;
+  }
+  WriteOk(out);
+}
+
+}  // namespace app::shell::commands
