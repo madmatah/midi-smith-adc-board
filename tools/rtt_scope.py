@@ -584,11 +584,8 @@ class RttScope:
     def _toggle_pause_history(self) -> None:
         if self.view_offset == 0:
             self.view_offset = 0.1
-            print("Paused at current.")
         else:
             self.view_offset = 0
-            print("Resumed Live View.")
-
             self.hover_v_line.visible = False
             self.hover_marker.visible = False
             self.hover_data = None
@@ -600,13 +597,10 @@ class RttScope:
     def _enable_autoscale(self) -> None:
         self.auto_scale_enabled = True
         self.manual_range_active = False
-        print("Auto-scale re-enabled.")
 
     def _take_snapshot(self) -> None:
         if self.view_offset > 0:
             self.export_snapshot()
-        else:
-            print("Snapshot is only available in PAUSE/HISTORY mode.")
 
     def _toggle_fullscreen(self) -> None:
         try:
@@ -684,28 +678,39 @@ class RttScope:
             self.throughput_kbps = (bytes_diff / 1024.0) / time_delta_seconds
             self.last_update_time = current_time
             self.last_bytes_count = total_bytes
-            # Debug heartbeat
-            # print(f"UI Heartbeat: {self.throughput_kbps} kB/s, Connected: {is_connected}")
 
-        if not is_connected:
-            status, color = "DISCONNECTED (Retrying...)", "#FF0000"
-        elif self.view_offset > 0:
-            status, color = "HISTORY/PAUSED", "#FFA500"
+        # 1. Connection Status
+        if is_connected:
+            conn_status = f"CONNECTED ({self.throughput_kbps:.1f} kB/s)"
+            status_color = "#00FF00"  # Green
         else:
-            status, color = "CONNECTED", "#00FF00"
+            conn_status = "DISCONNECTED (Retrying...)"
+            status_color = "#FF0000"  # Red
 
-        scale_mode = "[AUTO]" if self.auto_scale_enabled else "[MANUAL]"
-        text = f"Status: {status} | Scale: {scale_mode} | Throughput: {self.throughput_kbps:.1f} kB/s"
+        # 2. Data Mode
+        if self.view_offset > 0:
+            data_mode = "HISTORY"
+            if is_connected:
+                status_color = "#FFA500"  # Orange for history
+        else:
+            data_mode = "LIVE"
 
+        # 3. Scale Mode
+        scale_label = "AUTO" if self.auto_scale_enabled else "MANUAL"
+
+        # Build full status text
+        text = f"Status: {conn_status} | Data mode: {data_mode} | Scale: {scale_label}"
+
+        # Special overlays (Snapshots / Hover values)
         if self.snapshot_message and current_time < self.snapshot_message_expiry:
             text = self.snapshot_message
-            color = "#00FFFF"
+            status_color = "#00FFFF"  # Cyan
         elif self.hover_data and self.view_offset > 0:
             val = self.hover_data[1]
             text += f" | Value: {val:.0f}"
 
         self.status_text.text = text
-        self.status_text.color = color
+        self.status_text.color = status_color
 
     def run(self) -> None:
         print("Starting visualization. Close the window to exit.")
