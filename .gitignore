@@ -8,6 +8,7 @@ obj/
 *.map
 *.lst
 .cache
+__pycache__
 
 # --- CMake ---
 CMakeUserPresets.json
@@ -33,3 +34,7 @@ mxproject.bak
 # --- OS specifics ---
 .DS_Store
 Thumbs.db
+
+
+# -- Telemetry snapshots --
+rtt_snapshot_*.txt
