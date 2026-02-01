@@ -110,6 +110,7 @@ class RttScope:
         self.last_bytes_count = 0
         self.throughput_kbps = 0.0
         self.is_paused = False
+        self.paused_backlog = []  # Buffer to store data received while paused
         self.hover_data = None  # (index, value)
 
         # Snapshot feedback
@@ -288,6 +289,11 @@ class RttScope:
     def process_incoming_values(self, new_raw_values: Tuple[int, ...]) -> None:
         """Updates the plot data and performs auto-scaling."""
         if self.is_paused:
+            self.paused_backlog.extend(new_raw_values)
+            # Limit the backlog to avoid excessive memory usage (e.g., 10x the view width)
+            max_backlog_size = self.sample_count * 10
+            if len(self.paused_backlog) > max_backlog_size:
+                self.paused_backlog = self.paused_backlog[-max_backlog_size:]
             return
 
         shift = len(new_raw_values)
@@ -398,6 +404,12 @@ class RttScope:
     def _toggle_pause(self) -> None:
         self.is_paused = not self.is_paused
         if not self.is_paused:
+            if self.paused_backlog:
+                backlog_data = tuple(self.paused_backlog)
+                self.paused_backlog = []
+                self.process_incoming_values(backlog_data)
+                print(f"Resumed and processed {len(backlog_data)} backlog samples.")
+
             # Clear hover visuals when resuming
             self.hover_v_line.visible = False
             self.hover_marker.visible = False
