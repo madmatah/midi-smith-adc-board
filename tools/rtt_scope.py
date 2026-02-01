@@ -12,6 +12,7 @@ import socket
 import struct
 import sys
 import time
+import glfw
 from datetime import datetime
 from typing import Optional, Tuple
 
@@ -175,10 +176,68 @@ class RttScope:
         self.snapshot_message = ""
         self.snapshot_message_expiry = 0
 
+        # Window geometry for fullscreen toggle
+        self._window_geom = None
+        self._is_fullscreen = False
+
         self.canvas.events.mouse_move.connect(self.on_mouse_move)
         self.canvas.events.mouse_wheel.connect(self.on_mouse_wheel)
         self.canvas.events.mouse_press.connect(self.on_mouse_press)
         self.canvas.events.key_press.connect(self.on_key_press)
+        self.canvas.events.resize.connect(self.on_resize)
+
+        # Help hint at the bottom right
+        self.help_hint = scene.Text(
+            "Press H for help",
+            color='gray',
+            anchor_x='right',
+            parent=self.status_box,
+            pos=(self.canvas.size[0] - 10, 15),
+            font_size=10
+        )
+
+        # Help window overlay
+        self.help_window = scene.Widget(
+            parent=self.canvas.central_widget,
+            bgcolor=(0.1, 0.1, 0.1, 0.9),
+            border_color='white',
+            border_width=1,
+        )
+        self.help_window.visible = False
+
+        self.help_title = scene.Text(
+            "Keyboard Shortcuts",
+            color='white',
+            parent=self.help_window,
+            font_size=12,
+            bold=True,
+            anchor_x='center',
+            anchor_y='top'
+        )
+
+        self.help_keys = scene.Text(
+            "Space\nA\nD\nF\nQ\nH / ?",
+            color='yellow',
+            parent=self.help_window,
+            font_size=10,
+            anchor_x='right',
+            anchor_y='center'
+        )
+
+        self.help_desc = scene.Text(
+            ": Pause / Resume\n"
+            ": Toggle Auto-scale\n"
+            ": Save Snapshot (in Pause)\n"
+            ": Toggle Fullscreen\n"
+            ": Quit\n"
+            ": Show / Hide Help",
+            color='white',
+            parent=self.help_window,
+            font_size=10,
+            anchor_x='left',
+            anchor_y='center'
+        )
+        self._update_help_layout()
 
     def update_plot(self, new_raw_values: Tuple[int, ...]) -> None:
         """Updates the plot data and performs auto-scaling."""
@@ -282,7 +341,7 @@ class RttScope:
                 self.hover_v_line.visible = False
                 self.hover_marker.visible = False
                 self.hover_data = None
-        
+
         text = event.text.lower()
         if text == 'a':
             self.auto_scale_enabled = True
@@ -292,6 +351,64 @@ class RttScope:
                 self.export_snapshot()
             else:
                 print("Snapshot is only available in PAUSE mode.")
+        elif text == 'f':
+            # Manual fullscreen toggle for GLFW backend
+            window = self.canvas.native._id
+            monitor = glfw.get_primary_monitor()
+            vmode = glfw.get_video_mode(monitor)
+
+            if not self._is_fullscreen:
+                # Store current geometry
+                self._window_geom = (glfw.get_window_pos(window), glfw.get_window_size(window))
+                # Switch to fullscreen
+                glfw.set_window_monitor(window, monitor, 0, 0, vmode.size.width, vmode.size.height, vmode.refresh_rate)
+                self._is_fullscreen = True
+            else:
+                # Restore windowed mode
+                if self._window_geom:
+                    pos, size = self._window_geom
+                    glfw.set_window_monitor(window, None, pos[0], pos[1], size[0], size[1], 0)
+                else:
+                    glfw.set_window_monitor(window, None, 100, 100, 800, 600, 0)
+                self._is_fullscreen = False
+        elif text == 'q':
+            app.quit()
+        elif text == 'h' or text == '?':
+            self.help_window.visible = not self.help_window.visible
+
+    def on_resize(self, event) -> None:
+        """Updates UI components layout on window resize."""
+        self._update_help_layout()
+
+    def _update_help_layout(self) -> None:
+        """Positions the help window and hint text."""
+        w, h = self.canvas.size
+
+        # Position help hint relative to its parent status_box
+        if hasattr(self, 'help_hint') and hasattr(self, 'status_box'):
+            # Use status_box width if available
+            sb_w = self.status_box.size[0]
+            if sb_w <= 1: # Not yet laid out
+                sb_w = w
+            self.help_hint.pos = (sb_w - 10, 15)
+
+        # Position help window
+        if hasattr(self, 'help_window'):
+            # The help window is a child of central_widget, but we position it relative to the canvas
+            hw_w, hw_h = 400, 200
+            self.help_window.size = (hw_w, hw_h)
+            self.help_window.pos = ((w - hw_w) // 2, (h - hw_h) // 2)
+
+            # Y-down logic (0 is top)
+            # Title at the top
+            self.help_title.pos = (hw_w // 2, 30)
+
+            # Shortcut block centered vertically in the box
+            cols_y = 110 # Y position for the center of the block
+            split_x = hw_w // 2 - 80
+            cols_gap = 5
+            self.help_keys.pos = (split_x - cols_gap, cols_y)
+            self.help_desc.pos = (split_x + cols_gap, cols_y)
 
     def export_snapshot(self) -> None:
         """Exports the visible data points to a text file."""
