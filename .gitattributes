@@ -1,0 +1,9 @@
+# STM32CubeMX generated files
+Core/** linguist-vendored
+Drivers/** linguist-vendored
+Middlewares/** linguist-vendored
+Third_Party/** linguist-vendored
+USB_DEVICE/** linguist-vendored
+*.ioc linguist-vendored
+STM32H743XX_FLASH.ld linguist-vendored
+startup_stm32h743xx.s linguist-vendored
