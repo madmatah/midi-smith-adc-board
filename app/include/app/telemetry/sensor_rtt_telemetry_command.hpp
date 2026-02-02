@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "domain/sensors/sensor_rtt_mode.hpp"
+
 namespace app::telemetry {
 
 enum class SensorRttTelemetryCommandKind : std::uint8_t {
@@ -13,6 +15,7 @@ enum class SensorRttTelemetryCommandKind : std::uint8_t {
 struct SensorRttTelemetryCommand {
   SensorRttTelemetryCommandKind kind{SensorRttTelemetryCommandKind::kOff};
   std::uint8_t sensor_id{0};
+  domain::sensors::SensorRttMode mode{domain::sensors::SensorRttMode::kRaw};
   std::uint32_t period_ms{0};
 };
 

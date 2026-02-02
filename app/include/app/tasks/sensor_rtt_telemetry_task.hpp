@@ -17,6 +17,7 @@ class SensorRttTelemetryTask {
                          app::analog::AcquisitionStateRequirements& adc_state,
                          app::telemetry::TelemetrySenderRequirements& telemetry_sender,
                          volatile bool& enabled, volatile std::uint8_t& sensor_id,
+                         volatile domain::sensors::SensorRttMode& mode,
                          volatile std::uint32_t& period_ms) noexcept;
 
   bool start() noexcept;
@@ -34,6 +35,7 @@ class SensorRttTelemetryTask {
 
   volatile bool& enabled_;
   volatile std::uint8_t& sensor_id_;
+  volatile domain::sensors::SensorRttMode& mode_;
   volatile std::uint32_t& period_ms_;
 };
 
