@@ -12,8 +12,13 @@ class QueueSensorRttTelemetryControl final : public SensorRttTelemetryControlReq
  public:
   QueueSensorRttTelemetryControl(os::Queue<SensorRttTelemetryCommand, 4>& queue,
                                  volatile bool& enabled, volatile std::uint8_t& sensor_id,
+                                 volatile domain::sensors::SensorRttMode& mode,
                                  volatile std::uint32_t& period_ms) noexcept
-      : queue_(queue), enabled_(enabled), sensor_id_(sensor_id), period_ms_(period_ms) {}
+      : queue_(queue),
+        enabled_(enabled),
+        sensor_id_(sensor_id),
+        mode_(mode),
+        period_ms_(period_ms) {}
 
   bool RequestOff() noexcept override {
     if (!enabled_) {
@@ -24,10 +29,12 @@ class QueueSensorRttTelemetryControl final : public SensorRttTelemetryControlReq
     return queue_.Send(cmd, os::kNoWait);
   }
 
-  bool RequestObserve(std::uint8_t sensor_id) noexcept override {
+  bool RequestObserve(std::uint8_t sensor_id,
+                      domain::sensors::SensorRttMode mode) noexcept override {
     SensorRttTelemetryCommand cmd{};
     cmd.kind = SensorRttTelemetryCommandKind::kObserve;
     cmd.sensor_id = sensor_id;
+    cmd.mode = mode;
     return queue_.Send(cmd, os::kNoWait);
   }
 
@@ -42,6 +49,7 @@ class QueueSensorRttTelemetryControl final : public SensorRttTelemetryControlReq
     SensorRttTelemetryStatus s{};
     s.enabled = enabled_;
     s.sensor_id = sensor_id_;
+    s.mode = const_cast<domain::sensors::SensorRttMode&>(mode_);
     s.period_ms = period_ms_;
     return s;
   }
@@ -50,6 +58,7 @@ class QueueSensorRttTelemetryControl final : public SensorRttTelemetryControlReq
   os::Queue<SensorRttTelemetryCommand, 4>& queue_;
   volatile bool& enabled_;
   volatile std::uint8_t& sensor_id_;
+  volatile domain::sensors::SensorRttMode& mode_;
   volatile std::uint32_t& period_ms_;
 };
 

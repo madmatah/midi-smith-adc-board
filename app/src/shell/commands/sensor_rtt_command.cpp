@@ -23,7 +23,7 @@ std::string_view Arg(int argc, char** argv, int index) noexcept {
 }
 
 void WriteUsage(domain::io::WritableStreamRequirements& out) noexcept {
-  out.Write("usage: sensor_rtt <id>\r\n");
+  out.Write("usage: sensor_rtt <id> [raw|filtered|both]\r\n");
   out.Write("       sensor_rtt freq [value]\r\n");
   out.Write("       sensor_rtt off\r\n");
   out.Write("       sensor_rtt status\r\n");
@@ -91,6 +91,7 @@ struct SensorRttParsedCommand {
 
   Kind kind{Kind::kStatus};
   std::uint8_t sensor_id{0};
+  domain::sensors::SensorRttMode mode{domain::sensors::SensorRttMode::kRaw};
   std::uint32_t period_ms{0};
 };
 
@@ -102,6 +103,18 @@ void WriteStatus(domain::io::WritableStreamRequirements& out,
   }
   out.Write("on id=");
   WriteUint32(out, status.sensor_id);
+  out.Write(" mode=");
+  switch (status.mode) {
+    case domain::sensors::SensorRttMode::kRaw:
+      out.Write("raw");
+      break;
+    case domain::sensors::SensorRttMode::kFiltered:
+      out.Write("filtered");
+      break;
+    case domain::sensors::SensorRttMode::kBoth:
+      out.Write("both");
+      break;
+  }
   out.Write(" period_ms=");
   WriteUint32(out, status.period_ms);
   out.Write("\r\n");
@@ -147,6 +160,19 @@ bool TryParseCommand(int argc, char** argv, SensorRttParsedCommand& parsed,
 
   parsed.kind = SensorRttParsedCommand::Kind::kObserve;
   parsed.sensor_id = static_cast<std::uint8_t>(sensor_id_u32);
+
+  const std::string_view mode_arg = Arg(argc, argv, 2);
+  if (mode_arg.empty() || mode_arg == "raw") {
+    parsed.mode = domain::sensors::SensorRttMode::kRaw;
+  } else if (mode_arg == "filtered") {
+    parsed.mode = domain::sensors::SensorRttMode::kFiltered;
+  } else if (mode_arg == "both") {
+    parsed.mode = domain::sensors::SensorRttMode::kBoth;
+  } else {
+    WriteUsage(out);
+    return false;
+  }
+
   return true;
 }
 
@@ -198,7 +224,7 @@ void SensorRttCommand::Run(int argc, char** argv,
     return;
   }
 
-  if (!control_.RequestObserve(parsed.sensor_id)) {
+  if (!control_.RequestObserve(parsed.sensor_id, parsed.mode)) {
     WriteRejected(out);
     return;
   }

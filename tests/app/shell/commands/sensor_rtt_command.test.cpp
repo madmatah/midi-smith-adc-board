@@ -37,8 +37,10 @@ class ControlMock : public app::telemetry::SensorRttTelemetryControlRequirements
     off_requested = true;
     return true;
   }
-  bool RequestObserve(std::uint8_t sensor_id) noexcept override {
+  bool RequestObserve(std::uint8_t sensor_id,
+                      domain::sensors::SensorRttMode mode) noexcept override {
     last_observe_id = sensor_id;
+    last_mode = mode;
     observe_requested = true;
     return true;
   }
@@ -56,6 +58,7 @@ class ControlMock : public app::telemetry::SensorRttTelemetryControlRequirements
   bool observe_requested = false;
   bool period_requested = false;
   std::uint8_t last_observe_id = 0;
+  domain::sensors::SensorRttMode last_mode = domain::sensors::SensorRttMode::kRaw;
   std::uint32_t last_period_ms = 0;
 };
 
@@ -103,20 +106,60 @@ TEST_CASE("The SensorRttCommand class", "[app][shell][commands]") {
       SECTION("Should display status 'on' when enabled") {
         control.status.enabled = true;
         control.status.sensor_id = 1;
+        control.status.mode = domain::sensors::SensorRttMode::kFiltered;
         control.status.period_ms = 10;
         char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("status")};
         cmd.Run(2, argv, stream);
-        REQUIRE(stream.GetOutput() == "on id=1 period_ms=10\r\n");
+        REQUIRE(stream.GetOutput() == "on id=1 mode=filtered period_ms=10\r\n");
       }
     }
 
     SECTION("When called with a valid sensor id") {
-      SECTION("Should request observe for that id") {
+      SECTION("Should request observe for that id with default mode 'raw'") {
         char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("2")};
         cmd.Run(2, argv, stream);
         REQUIRE(control.observe_requested);
         REQUIRE(control.last_observe_id == 2);
+        REQUIRE(control.last_mode == domain::sensors::SensorRttMode::kRaw);
         REQUIRE(stream.GetOutput() == "ok\r\n");
+      }
+
+      SECTION("Should request observe for that id with mode 'raw'") {
+        char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("2"),
+                        const_cast<char*>("raw")};
+        cmd.Run(3, argv, stream);
+        REQUIRE(control.observe_requested);
+        REQUIRE(control.last_observe_id == 2);
+        REQUIRE(control.last_mode == domain::sensors::SensorRttMode::kRaw);
+        REQUIRE(stream.GetOutput() == "ok\r\n");
+      }
+
+      SECTION("Should request observe for that id with mode 'filtered'") {
+        char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("2"),
+                        const_cast<char*>("filtered")};
+        cmd.Run(3, argv, stream);
+        REQUIRE(control.observe_requested);
+        REQUIRE(control.last_observe_id == 2);
+        REQUIRE(control.last_mode == domain::sensors::SensorRttMode::kFiltered);
+        REQUIRE(stream.GetOutput() == "ok\r\n");
+      }
+
+      SECTION("Should request observe for that id with mode 'both'") {
+        char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("2"),
+                        const_cast<char*>("both")};
+        cmd.Run(3, argv, stream);
+        REQUIRE(control.observe_requested);
+        REQUIRE(control.last_observe_id == 2);
+        REQUIRE(control.last_mode == domain::sensors::SensorRttMode::kBoth);
+        REQUIRE(stream.GetOutput() == "ok\r\n");
+      }
+
+      SECTION("With an invalid mode, should show usage") {
+        char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("2"),
+                        const_cast<char*>("invalid")};
+        cmd.Run(3, argv, stream);
+        REQUIRE_FALSE(control.observe_requested);
+        REQUIRE(stream.GetOutput().find("usage:") != std::string::npos);
       }
     }
 

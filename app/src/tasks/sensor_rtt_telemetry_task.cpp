@@ -26,13 +26,15 @@ SensorRttTelemetryTask::SensorRttTelemetryTask(
     os::Queue<app::telemetry::SensorRttTelemetryCommand, 4>& control_queue,
     domain::sensors::SensorRegistry& registry, app::analog::AcquisitionStateRequirements& adc_state,
     app::telemetry::TelemetrySenderRequirements& telemetry_sender, volatile bool& enabled,
-    volatile std::uint8_t& sensor_id, volatile std::uint32_t& period_ms) noexcept
+    volatile std::uint8_t& sensor_id, volatile domain::sensors::SensorRttMode& mode,
+    volatile std::uint32_t& period_ms) noexcept
     : control_queue_(control_queue),
       registry_(registry),
       adc_state_(adc_state),
       telemetry_sender_(telemetry_sender),
       enabled_(enabled),
       sensor_id_(sensor_id),
+      mode_(mode),
       period_ms_(period_ms) {}
 
 void SensorRttTelemetryTask::entry(void* ctx) noexcept {
@@ -60,6 +62,7 @@ void SensorRttTelemetryTask::ApplyCommand(
 
     enabled_ = true;
     sensor_id_ = cmd.sensor_id;
+    mode_ = cmd.mode;
     return;
   }
 
@@ -72,6 +75,7 @@ void SensorRttTelemetryTask::ApplyCommand(
 void SensorRttTelemetryTask::run() noexcept {
   enabled_ = false;
   sensor_id_ = 0;
+  mode_ = domain::sensors::SensorRttMode::kRaw;
   period_ms_ = app::config::RTT_TELEMETRY_SENSOR_PERIOD_MS;
 
   for (;;) {
@@ -101,7 +105,20 @@ void SensorRttTelemetryTask::run() noexcept {
       continue;
     }
 
-    telemetry_sender_.Send(static_cast<std::uint32_t>(sensor->last_raw_value()));
+    switch (mode_) {
+      case domain::sensors::SensorRttMode::kRaw:
+        telemetry_sender_.Send(static_cast<std::uint32_t>(sensor->last_raw_value()));
+        break;
+      case domain::sensors::SensorRttMode::kFiltered:
+        telemetry_sender_.Send(static_cast<std::uint32_t>(sensor->last_filtered_value()));
+        break;
+      case domain::sensors::SensorRttMode::kBoth: {
+        const std::uint32_t raw = sensor->last_raw_value();
+        const std::uint32_t filtered = sensor->last_filtered_value();
+        telemetry_sender_.Send((raw << 16) | filtered);
+        break;
+      }
+    }
   }
 }
 
