@@ -5,7 +5,6 @@
 #include <string_view>
 #include <system_error>
 
-#include "app/config/config.hpp"
 
 namespace app::shell::commands {
 namespace {
@@ -24,7 +23,8 @@ std::string_view Arg(int argc, char** argv, int index) noexcept {
 }
 
 void WriteUsage(domain::io::WritableStreamRequirements& out) noexcept {
-  out.Write("usage: sensor_rtt <id> [hz|Nms]\r\n");
+  out.Write("usage: sensor_rtt <id>\r\n");
+  out.Write("       sensor_rtt freq [value]\r\n");
   out.Write("       sensor_rtt off\r\n");
   out.Write("       sensor_rtt status\r\n");
 }
@@ -55,19 +55,9 @@ bool ParseUint32(std::string_view text, std::uint32_t& out_value) noexcept {
   out_value = value;
   return true;
 }
-
-bool ParsePeriodMsFromRateArg(std::string_view arg, std::uint32_t& out_period_ms) noexcept {
+bool ParsePeriodMsFromHzArg(std::string_view arg, std::uint32_t& out_period_ms) noexcept {
   if (arg.empty()) {
     return false;
-  }
-
-  if (arg.size() >= 2u && arg.substr(arg.size() - 2u) == "ms") {
-    std::uint32_t ms = 0;
-    if (!ParseUint32(arg.substr(0, arg.size() - 2u), ms)) {
-      return false;
-    }
-    out_period_ms = ms;
-    return true;
   }
 
   std::uint32_t hz = 0;
@@ -95,6 +85,8 @@ struct SensorRttParsedCommand {
     kOff = 0,
     kStatus = 1,
     kObserve = 2,
+    kGetFreq = 3,
+    kSetFreq = 4,
   };
 
   Kind kind{Kind::kStatus};
@@ -133,6 +125,20 @@ bool TryParseCommand(int argc, char** argv, SensorRttParsedCommand& parsed,
     return true;
   }
 
+  if (op == "freq") {
+    const std::string_view freq_arg = Arg(argc, argv, 2);
+    if (freq_arg.empty()) {
+      parsed.kind = SensorRttParsedCommand::Kind::kGetFreq;
+      return true;
+    }
+    if (!ParsePeriodMsFromHzArg(freq_arg, parsed.period_ms)) {
+      WriteUsage(out);
+      return false;
+    }
+    parsed.kind = SensorRttParsedCommand::Kind::kSetFreq;
+    return true;
+  }
+
   std::uint32_t sensor_id_u32 = 0;
   if (!ParseUint32(op, sensor_id_u32) || sensor_id_u32 > 255u) {
     WriteUsage(out);
@@ -141,17 +147,6 @@ bool TryParseCommand(int argc, char** argv, SensorRttParsedCommand& parsed,
 
   parsed.kind = SensorRttParsedCommand::Kind::kObserve;
   parsed.sensor_id = static_cast<std::uint8_t>(sensor_id_u32);
-  parsed.period_ms = app::config::RTT_TELEMETRY_SENSOR_PERIOD_MS;
-
-  const std::string_view rate_arg = Arg(argc, argv, 2);
-  if (rate_arg.empty()) {
-    return true;
-  }
-
-  if (!ParsePeriodMsFromRateArg(rate_arg, parsed.period_ms)) {
-    WriteUsage(out);
-    return false;
-  }
   return true;
 }
 
@@ -178,12 +173,32 @@ void SensorRttCommand::Run(int argc, char** argv,
     return;
   }
 
+  if (parsed.kind == SensorRttParsedCommand::Kind::kGetFreq) {
+    const auto status = control_.GetStatus();
+    if (status.period_ms > 0) {
+      WriteUint32(out, 1000u / status.period_ms);
+    } else {
+      out.Write("0");
+    }
+    out.Write("\r\n");
+    return;
+  }
+
+  if (parsed.kind == SensorRttParsedCommand::Kind::kSetFreq) {
+    if (!control_.RequestSetPeriod(parsed.period_ms)) {
+      WriteRejected(out);
+      return;
+    }
+    WriteOk(out);
+    return;
+  }
+
   if (registry_.FindById(parsed.sensor_id) == nullptr) {
     WriteUnknownSensorId(out);
     return;
   }
 
-  if (!control_.RequestObserve(parsed.sensor_id, parsed.period_ms)) {
+  if (!control_.RequestObserve(parsed.sensor_id)) {
     WriteRejected(out);
     return;
   }

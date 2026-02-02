@@ -33,6 +33,8 @@ add_executable(unit_tests
     app/analog/adc12_frame_decoder.test.cpp
     app/analog/adc3_frame_decoder.test.cpp
     app/analog/acquisition_sequencer.test.cpp
+    app/shell/commands/sensor_rtt_command.test.cpp
+    ${CMAKE_SOURCE_DIR}/app/src/shell/commands/sensor_rtt_command.cpp
 )
 target_link_libraries(unit_tests PRIVATE
     Catch2::Catch2WithMain

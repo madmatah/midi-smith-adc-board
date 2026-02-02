@@ -47,7 +47,6 @@ void SensorRttTelemetryTask::ApplyCommand(
   if (cmd.kind == app::telemetry::SensorRttTelemetryCommandKind::kOff) {
     enabled_ = false;
     sensor_id_ = 0;
-    period_ms_ = app::config::RTT_TELEMETRY_SENSOR_PERIOD_MS;
     return;
   }
 
@@ -61,7 +60,12 @@ void SensorRttTelemetryTask::ApplyCommand(
 
     enabled_ = true;
     sensor_id_ = cmd.sensor_id;
+    return;
+  }
+
+  if (cmd.kind == app::telemetry::SensorRttTelemetryCommandKind::kSetPeriod) {
     period_ms_ = ClampPeriodMs(cmd.period_ms);
+    return;
   }
 }
 
