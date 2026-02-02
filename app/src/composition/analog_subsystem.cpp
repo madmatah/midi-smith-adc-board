@@ -5,16 +5,15 @@
 
 #include "app/analog/queue_acquisition_control.hpp"
 #include "app/composition/subsystems.hpp"
-#include "app/config/config.hpp"
 #include "app/config/sensors.hpp"
 #include "app/config/sensors_validation.hpp"
+#include "app/config/signal_filtering.hpp"
 #include "app/tasks/analog_acquisition_task.hpp"
 #include "bsp/adc/adc_dma.hpp"
 #include "bsp/pins.hpp"
 #include "bsp/time/tim2_timestamp_counter.hpp"
 #include "domain/sensors/filtering_sensor_group.hpp"
 #include "domain/sensors/sensor_registry.hpp"
-#include "domain/signal/filters/sg5_smoother.hpp"
 #include "os/queue.hpp"
 
 namespace app::composition {
@@ -59,7 +58,7 @@ domain::sensors::SensorRegistry& SensorsRegistry() noexcept {
   return registry;
 }
 
-using Filter = domain::signal::filters::Sg5Smoother;
+using Filter = app::config::AnalogSensorFilter;
 using FilteredSensorGroup = domain::sensors::FilteringSensorGroup<Filter>;
 
 void StartAnalogAcquisitionTask(FilteredSensorGroup& adc12_group,

@@ -23,12 +23,6 @@ constexpr uint32_t SENSOR_RTT_TELEMETRY_TASK_STACK_BYTES = 1024;
 constexpr uint32_t ANALOG_ADC12_TICKS_PER_SEQUENCE_ESTIMATE = 13;
 constexpr uint32_t ANALOG_ADC3_TICKS_PER_SEQUENCE_ESTIMATE = 13;
 
-// Signal filtering
-
-// Decimation factor is applied on the filtered signal to reduce the sampling rate
-// This is useful for reducing the CPU load of the filtering task. Set to 1 to disable decimation.
-constexpr std::uint8_t SIGNAL_DECIMATION_FACTOR = 1;
-
 // Shell
 constexpr uint32_t SHELL_TASK_IDLE_DELAY_MS = 10;
 
