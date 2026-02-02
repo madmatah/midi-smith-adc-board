@@ -37,6 +37,11 @@ class Sensor {
     last_timestamp_ticks_ = timestamp_ticks;
   }
 
+  void UpdateRaw(std::uint16_t raw_value, std::uint32_t timestamp_ticks) noexcept {
+    last_raw_value_ = raw_value;
+    last_timestamp_ticks_ = timestamp_ticks;
+  }
+
  private:
   std::uint8_t id_ = 0;
   std::uint16_t last_raw_value_ = 0;

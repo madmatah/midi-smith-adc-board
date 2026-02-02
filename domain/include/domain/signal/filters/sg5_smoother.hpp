@@ -17,16 +17,27 @@ class Sg5Smoother {
   }
 
   std::uint16_t Apply(std::uint16_t sample) noexcept {
+    Push(sample);
+    return ComputeOrRaw(sample);
+  }
+
+  void Push(std::uint16_t sample) noexcept {
     history_[next_index_] = sample;
     next_index_ = NextIndex(next_index_);
     if (filled_ < kWindowSize) {
       ++filled_;
     }
+  }
 
+  std::uint16_t ComputeOrRaw(std::uint16_t raw_fallback) const noexcept {
     if (filled_ < kWindowSize) {
-      return sample;
+      return raw_fallback;
     }
+    return Compute();
+  }
 
+ private:
+  std::uint16_t Compute() const noexcept {
     const std::size_t i0 = next_index_;
     const std::size_t i1 = NextIndex(i0);
     const std::size_t i2 = NextIndex(i1);
@@ -51,7 +62,6 @@ class Sg5Smoother {
     return static_cast<std::uint16_t>(clamped);
   }
 
- private:
   static constexpr std::size_t NextIndex(std::size_t index) noexcept {
     const std::size_t next = index + 1u;
     return (next >= kWindowSize) ? 0u : next;
