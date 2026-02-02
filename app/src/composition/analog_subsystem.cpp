@@ -5,6 +5,7 @@
 
 #include "app/analog/queue_acquisition_control.hpp"
 #include "app/composition/subsystems.hpp"
+#include "app/config/config.hpp"
 #include "app/config/sensors.hpp"
 #include "app/config/sensors_validation.hpp"
 #include "app/tasks/analog_acquisition_task.hpp"
@@ -105,6 +106,8 @@ AdcControlContext CreateAnalogSubsystem() noexcept {
   static domain::sensors::Sensor* adc3_ptrs[app::config_sensors::kAdc3ChannelCount];
   static std::array<Filter, app::config_sensors::kAdc12ChannelCount> adc12_filters{};
   static std::array<Filter, app::config_sensors::kAdc3ChannelCount> adc3_filters{};
+  static std::array<std::uint8_t, app::config_sensors::kAdc12ChannelCount> adc12_filter_phases{};
+  static std::array<std::uint8_t, app::config_sensors::kAdc3ChannelCount> adc3_filter_phases{};
 
   domain::sensors::SensorRegistry& registry = SensorsRegistry();
   for (std::size_t i = 0; i < app::config_sensors::kAdc12ChannelCount; ++i) {
@@ -114,10 +117,12 @@ AdcControlContext CreateAnalogSubsystem() noexcept {
     adc3_ptrs[i] = registry.FindById(app::config_sensors::kAdc3SensorIds[i]);
   }
 
-  static FilteredSensorGroup adc12_group(adc12_ptrs, adc12_filters.data(),
-                                         app::config_sensors::kAdc12ChannelCount);
-  static FilteredSensorGroup adc3_group(adc3_ptrs, adc3_filters.data(),
-                                        app::config_sensors::kAdc3ChannelCount);
+  static FilteredSensorGroup adc12_group(
+      adc12_ptrs, adc12_filters.data(), adc12_filter_phases.data(),
+      app::config_sensors::kAdc12ChannelCount, app::config::SIGNAL_DECIMATION_FACTOR);
+  static FilteredSensorGroup adc3_group(adc3_ptrs, adc3_filters.data(), adc3_filter_phases.data(),
+                                        app::config_sensors::kAdc3ChannelCount,
+                                        app::config::SIGNAL_DECIMATION_FACTOR);
 
   StartAnalogAcquisitionTask(adc12_group, adc3_group);
   return AdcControlContext{AdcControl()};
