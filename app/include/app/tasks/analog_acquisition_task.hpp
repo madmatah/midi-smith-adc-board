@@ -9,7 +9,8 @@
 #include "app/time/timestamp_counter_requirements.hpp"
 #include "bsp/adc/adc_dma.hpp"
 #include "bsp/gpio_requirements.hpp"
-#include "domain/sensors/sensor_group.hpp"
+#include "domain/sensors/filtering_sensor_group.hpp"
+#include "domain/signal/filters/sg5_smoother.hpp"
 #include "os/queue.hpp"
 
 namespace app::analog {
@@ -20,13 +21,15 @@ namespace app::Tasks {
 
 class AnalogAcquisitionTask {
  public:
+  using Filter = domain::signal::filters::Sg5Smoother;
+  using FilteredSensorGroup = domain::sensors::FilteringSensorGroup<Filter>;
+
   AnalogAcquisitionTask(os::Queue<bsp::adc::AdcFrameDescriptor, 8>& queue,
                         os::Queue<app::analog::AcquisitionCommand, 4>& control_queue,
                         bsp::GpioRequirements& tia_shutdown, bsp::adc::AdcDma& adc_dma,
                         app::time::TimestampCounterRequirements& timestamp_counter,
                         volatile app::analog::AcquisitionState& state,
-                        domain::sensors::SensorGroup& adc12_group,
-                        domain::sensors::SensorGroup& adc3_group) noexcept;
+                        FilteredSensorGroup& adc12_group, FilteredSensorGroup& adc3_group) noexcept;
 
   bool start() noexcept;
 
@@ -49,8 +52,8 @@ class AnalogAcquisitionTask {
   bsp::adc::AdcDma& adc_dma_;
   app::time::TimestampCounterRequirements& timestamp_counter_;
   volatile app::analog::AcquisitionState& state_;
-  domain::sensors::SensorGroup& adc12_group_;
-  domain::sensors::SensorGroup& adc3_group_;
+  FilteredSensorGroup& adc12_group_;
+  FilteredSensorGroup& adc3_group_;
 
   app::analog::Adc12FrameDecoder adc12_decoder_{};
   app::analog::Adc3FrameDecoder adc3_decoder_{};

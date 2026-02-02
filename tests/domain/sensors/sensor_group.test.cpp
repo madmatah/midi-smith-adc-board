@@ -29,6 +29,7 @@ TEST_CASE("The SensorGroup class") {
       group.UpdateAt(1, 1234, 99);
 
       REQUIRE(s2.last_raw_value() == 1234);
+      REQUIRE(s2.last_filtered_value() == 1234);
       REQUIRE(s2.last_timestamp_ticks() == 99);
     }
   }

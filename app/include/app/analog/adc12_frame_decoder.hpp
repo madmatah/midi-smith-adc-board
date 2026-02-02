@@ -3,14 +3,13 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "domain/sensors/sensor_group.hpp"
-
 namespace app::analog {
 
 class Adc12FrameDecoder {
  public:
-  void ApplySequence(const std::uint32_t* packed_words, std::size_t word_count,
-                     domain::sensors::SensorGroup& group, std::uint32_t timestamp_ticks) noexcept {
+  template <typename GroupT>
+  void ApplySequence(const std::uint32_t* packed_words, std::size_t word_count, GroupT& group,
+                     std::uint32_t timestamp_ticks) noexcept {
     if (packed_words == nullptr || word_count < 7 || group.count() < 14) {
       return;
     }
