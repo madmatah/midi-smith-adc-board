@@ -7,6 +7,7 @@ namespace app::telemetry {
 enum class SensorRttTelemetryCommandKind : std::uint8_t {
   kOff = 0,
   kObserve = 1,
+  kSetPeriod = 2,
 };
 
 struct SensorRttTelemetryCommand {

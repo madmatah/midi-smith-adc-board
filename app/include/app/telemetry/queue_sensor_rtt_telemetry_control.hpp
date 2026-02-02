@@ -24,10 +24,16 @@ class QueueSensorRttTelemetryControl final : public SensorRttTelemetryControlReq
     return queue_.Send(cmd, os::kNoWait);
   }
 
-  bool RequestObserve(std::uint8_t sensor_id, std::uint32_t period_ms) noexcept override {
+  bool RequestObserve(std::uint8_t sensor_id) noexcept override {
     SensorRttTelemetryCommand cmd{};
     cmd.kind = SensorRttTelemetryCommandKind::kObserve;
     cmd.sensor_id = sensor_id;
+    return queue_.Send(cmd, os::kNoWait);
+  }
+
+  bool RequestSetPeriod(std::uint32_t period_ms) noexcept override {
+    SensorRttTelemetryCommand cmd{};
+    cmd.kind = SensorRttTelemetryCommandKind::kSetPeriod;
     cmd.period_ms = period_ms;
     return queue_.Send(cmd, os::kNoWait);
   }
