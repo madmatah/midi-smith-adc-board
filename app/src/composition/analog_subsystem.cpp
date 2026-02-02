@@ -1,3 +1,4 @@
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <new>
@@ -10,8 +11,9 @@
 #include "bsp/adc/adc_dma.hpp"
 #include "bsp/pins.hpp"
 #include "bsp/time/tim2_timestamp_counter.hpp"
-#include "domain/sensors/sensor_group.hpp"
+#include "domain/sensors/filtering_sensor_group.hpp"
 #include "domain/sensors/sensor_registry.hpp"
+#include "domain/signal/filters/sg5_smoother.hpp"
 #include "os/queue.hpp"
 
 namespace app::composition {
@@ -56,8 +58,11 @@ domain::sensors::SensorRegistry& SensorsRegistry() noexcept {
   return registry;
 }
 
-void StartAnalogAcquisitionTask(domain::sensors::SensorGroup& adc12_group,
-                                domain::sensors::SensorGroup& adc3_group) noexcept {
+using Filter = domain::signal::filters::Sg5Smoother;
+using FilteredSensorGroup = domain::sensors::FilteringSensorGroup<Filter>;
+
+void StartAnalogAcquisitionTask(FilteredSensorGroup& adc12_group,
+                                FilteredSensorGroup& adc3_group) noexcept {
   static os::Queue<bsp::adc::AdcFrameDescriptor, 8> adc_frame_queue;
   static bsp::adc::AdcDma adc_dma(adc_frame_queue);
   static bsp::time::TimestampCounter timestamp_counter = bsp::time::CreateTim2TimestampCounter();
@@ -98,6 +103,8 @@ AdcControlContext CreateAnalogSubsystem() noexcept {
 
   static domain::sensors::Sensor* adc12_ptrs[app::config_sensors::kAdc12ChannelCount];
   static domain::sensors::Sensor* adc3_ptrs[app::config_sensors::kAdc3ChannelCount];
+  static std::array<Filter, app::config_sensors::kAdc12ChannelCount> adc12_filters{};
+  static std::array<Filter, app::config_sensors::kAdc3ChannelCount> adc3_filters{};
 
   domain::sensors::SensorRegistry& registry = SensorsRegistry();
   for (std::size_t i = 0; i < app::config_sensors::kAdc12ChannelCount; ++i) {
@@ -107,9 +114,10 @@ AdcControlContext CreateAnalogSubsystem() noexcept {
     adc3_ptrs[i] = registry.FindById(app::config_sensors::kAdc3SensorIds[i]);
   }
 
-  static domain::sensors::SensorGroup adc12_group(adc12_ptrs,
-                                                  app::config_sensors::kAdc12ChannelCount);
-  static domain::sensors::SensorGroup adc3_group(adc3_ptrs, app::config_sensors::kAdc3ChannelCount);
+  static FilteredSensorGroup adc12_group(adc12_ptrs, adc12_filters.data(),
+                                         app::config_sensors::kAdc12ChannelCount);
+  static FilteredSensorGroup adc3_group(adc3_ptrs, adc3_filters.data(),
+                                        app::config_sensors::kAdc3ChannelCount);
 
   StartAnalogAcquisitionTask(adc12_group, adc3_group);
   return AdcControlContext{AdcControl()};

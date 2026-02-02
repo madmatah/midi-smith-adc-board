@@ -23,11 +23,13 @@ target_include_directories(fakeit INTERFACE
 )
 
 add_executable(unit_tests
+    domain/signal/filters/sg5_smoother.test.cpp
     domain/shell/command_parser.test.cpp
     domain/shell/line_editor.test.cpp
     domain/shell/command_dispatcher.test.cpp
     domain/shell/shell_engine.test.cpp
     domain/shell/commands/version_command.test.cpp
+    domain/sensors/filtering_sensor_group.test.cpp
     domain/sensors/sensor_group.test.cpp
     domain/sensors/sensor_registry.test.cpp
     app/analog/adc12_frame_decoder.test.cpp
@@ -50,4 +52,3 @@ target_compile_features(unit_tests PRIVATE cxx_std_17)
 
 include(Catch)
 catch_discover_tests(unit_tests)
-
