@@ -6,11 +6,11 @@
 #include "app/analog/acquisition_state.hpp"
 #include "app/analog/adc12_frame_decoder.hpp"
 #include "app/analog/adc3_frame_decoder.hpp"
+#include "app/config/signal_filtering.hpp"
 #include "app/time/timestamp_counter_requirements.hpp"
 #include "bsp/adc/adc_dma.hpp"
 #include "bsp/gpio_requirements.hpp"
 #include "domain/sensors/filtering_sensor_group.hpp"
-#include "domain/signal/filters/sg5_smoother.hpp"
 #include "os/queue.hpp"
 
 namespace app::analog {
@@ -21,7 +21,7 @@ namespace app::Tasks {
 
 class AnalogAcquisitionTask {
  public:
-  using Filter = domain::signal::filters::Sg5Smoother;
+  using Filter = app::config::AnalogSensorFilter;
   using FilteredSensorGroup = domain::sensors::FilteringSensorGroup<Filter>;
 
   AnalogAcquisitionTask(os::Queue<bsp::adc::AdcFrameDescriptor, 8>& queue,

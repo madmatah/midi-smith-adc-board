@@ -6,6 +6,7 @@
 
 namespace domain::signal::filters {
 
+// Savitzky-Golay smoothing filter (with 5-point window)
 class Sg5Smoother {
  public:
   static constexpr std::size_t kWindowSize = 5;

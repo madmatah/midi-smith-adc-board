@@ -24,6 +24,8 @@ target_include_directories(fakeit INTERFACE
 
 add_executable(unit_tests
     domain/signal/filters/sg5_smoother.test.cpp
+    domain/signal/filters/ema_filter.test.cpp
+    domain/signal/filters/filter_pipeline.test.cpp
     domain/shell/command_parser.test.cpp
     domain/shell/line_editor.test.cpp
     domain/shell/command_dispatcher.test.cpp
