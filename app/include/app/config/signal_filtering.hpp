@@ -1,21 +1,34 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 
 #include "domain/signal/filters/ema_filter.hpp"
 #include "domain/signal/filters/filter_pipeline.hpp"
+#include "domain/signal/filters/identity_filter.hpp"
 #include "domain/signal/filters/sg5_smoother.hpp"
 
 namespace app::config {
 
+constexpr bool SIGNAL_FILTERING_ENABLED = true;
+
 constexpr std::int32_t SIGNAL_EMA_ALPHA_NUMERATOR = 1;
 constexpr std::int32_t SIGNAL_EMA_ALPHA_DENOMINATOR = 16;
 
+namespace signal_filtering_detail {
 
-using AnalogSensorFilter = domain::signal::filters::FilterPipeline<
+using EnabledAnalogSensorFilter = domain::signal::filters::FilterPipeline<
     domain::signal::filters::EmaFilterRatio<SIGNAL_EMA_ALPHA_NUMERATOR,
                                             SIGNAL_EMA_ALPHA_DENOMINATOR>,
     domain::signal::filters::Sg5Smoother>;
+
+using DisabledAnalogSensorFilter = domain::signal::filters::IdentityFilter;
+
+}  // namespace signal_filtering_detail
+
+using AnalogSensorFilter =
+    std::conditional_t<SIGNAL_FILTERING_ENABLED, signal_filtering_detail::EnabledAnalogSensorFilter,
+                       signal_filtering_detail::DisabledAnalogSensorFilter>;
 
 
 // Decimation factor is applied on the filtered signal to reduce the sampling rate
