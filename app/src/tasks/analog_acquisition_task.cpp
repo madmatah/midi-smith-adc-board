@@ -18,14 +18,15 @@ inline std::uint32_t DeltaTicks(std::uint32_t now, std::uint32_t then) noexcept 
 
 inline std::uint32_t ComputeTicksPerSequence(std::uint32_t now_timestamp_ticks,
                                              std::uint32_t estimate_ticks_per_sequence,
+                                             std::uint16_t sequences_per_half_buffer,
                                              bool& has_prev_timestamp,
                                              std::uint32_t& prev_timestamp_ticks) noexcept {
   std::uint32_t ticks_per_sequence = estimate_ticks_per_sequence;
   if (has_prev_timestamp) {
     const std::uint32_t delta = DeltaTicks(now_timestamp_ticks, prev_timestamp_ticks);
-    static_assert(bsp::adc::AdcDma::kSequencesPerHalfBuffer > 0u,
-                  "kSequencesPerHalfBuffer must be > 0");
-    ticks_per_sequence = delta / bsp::adc::AdcDma::kSequencesPerHalfBuffer;
+    if (sequences_per_half_buffer > 0u) {
+      ticks_per_sequence = delta / sequences_per_half_buffer;
+    }
   }
   prev_timestamp_ticks = now_timestamp_ticks;
   has_prev_timestamp = true;
@@ -36,14 +37,18 @@ template <typename SampleT, std::size_t kRanksPerSequence, typename ApplyFn>
 inline void ForEachTimestampedSequenceInHalfBuffer(const SampleT* data,
                                                    std::uint32_t end_timestamp_ticks,
                                                    std::uint32_t ticks_per_sequence,
+                                                   std::uint16_t sequences_per_half_buffer,
                                                    ApplyFn apply) noexcept {
+  if (data == nullptr || sequences_per_half_buffer == 0u) {
+    return;
+  }
+
   const std::uint32_t first_ts = static_cast<std::uint32_t>(
       end_timestamp_ticks -
-      static_cast<std::uint32_t>((bsp::adc::AdcDma::kSequencesPerHalfBuffer - 1u) *
-                                 ticks_per_sequence));
+      static_cast<std::uint32_t>((sequences_per_half_buffer - 1u) * ticks_per_sequence));
   std::uint32_t ts = first_ts;
   const SampleT* seq_ptr = data;
-  for (std::size_t seq = 0; seq < bsp::adc::AdcDma::kSequencesPerHalfBuffer; ++seq) {
+  for (std::size_t seq = 0; seq < sequences_per_half_buffer; ++seq) {
     apply(seq_ptr, ts);
     seq_ptr += kRanksPerSequence;
     ts = static_cast<std::uint32_t>(ts + ticks_per_sequence);
@@ -88,16 +93,14 @@ AnalogAcquisitionTask::AnalogAcquisitionTask(
     os::Queue<app::analog::AcquisitionCommand, 4>& control_queue,
     bsp::GpioRequirements& tia_shutdown, bsp::adc::AdcDma& adc_dma,
     app::time::TimestampCounterRequirements& timestamp_counter,
-    volatile app::analog::AcquisitionState& state, FilteredSensorGroup& adc12_group,
-    FilteredSensorGroup& adc3_group) noexcept
+    volatile app::analog::AcquisitionState& state, FilteredSensorGroup& analog_group) noexcept
     : queue_(queue),
       control_queue_(control_queue),
       tia_shutdown_(tia_shutdown),
       adc_dma_(adc_dma),
       timestamp_counter_(timestamp_counter),
       state_(state),
-      adc12_group_(adc12_group),
-      adc3_group_(adc3_group) {}
+      analog_group_(analog_group) {}
 
 void AnalogAcquisitionTask::entry(void* ctx) noexcept {
   if (ctx == nullptr) {
@@ -107,11 +110,14 @@ void AnalogAcquisitionTask::entry(void* ctx) noexcept {
 }
 
 void AnalogAcquisitionTask::ResetDecodingState() noexcept {
-  last_adc12_sequence_id_ = 0;
+  last_adc1_sequence_id_ = 0;
+  last_adc2_sequence_id_ = 0;
   last_adc3_sequence_id_ = 0;
-  has_prev_adc12_timestamp_ = false;
+  has_prev_adc1_timestamp_ = false;
+  has_prev_adc2_timestamp_ = false;
   has_prev_adc3_timestamp_ = false;
-  prev_adc12_timestamp_ = 0;
+  prev_adc1_timestamp_ = 0;
+  prev_adc2_timestamp_ = 0;
   prev_adc3_timestamp_ = 0;
 }
 
@@ -168,37 +174,61 @@ bool AnalogAcquisitionTask::TryHandleDisableRequestWhileEnabled() noexcept {
   return true;
 }
 
-void AnalogAcquisitionTask::ProcessAdc12Frame(const bsp::adc::AdcFrameDescriptor& desc) noexcept {
+void AnalogAcquisitionTask::ProcessAdc1Frame(const bsp::adc::AdcFrameDescriptor& desc) noexcept {
+  const std::uint16_t sequences_per_half_buffer =
+      static_cast<std::uint16_t>(desc.element_count / bsp::adc::AdcDma::kAdc1RanksPerSequence);
   const std::uint32_t ticks_per_sequence = ComputeTicksPerSequence(
       desc.timestamp_ticks, ::app::config::ANALOG_ADC12_TICKS_PER_SEQUENCE_ESTIMATE,
-      has_prev_adc12_timestamp_, prev_adc12_timestamp_);
+      sequences_per_half_buffer, has_prev_adc1_timestamp_, prev_adc1_timestamp_);
 
-  const auto* words = static_cast<const std::uint32_t*>(desc.data);
-  ForEachTimestampedSequenceInHalfBuffer<std::uint32_t, bsp::adc::AdcDma::kAdc12RanksPerSequence>(
-      words, desc.timestamp_ticks, ticks_per_sequence,
-      [this](const std::uint32_t* seq_ptr, std::uint32_t ts) noexcept {
-        adc12_decoder_.ApplySequence(seq_ptr, bsp::adc::AdcDma::kAdc12RanksPerSequence,
-                                     adc12_group_, ts);
+  const auto* values = static_cast<const std::uint16_t*>(desc.data);
+  ForEachTimestampedSequenceInHalfBuffer<std::uint16_t, bsp::adc::AdcDma::kAdc1RanksPerSequence>(
+      values, desc.timestamp_ticks, ticks_per_sequence, sequences_per_half_buffer,
+      [this](const std::uint16_t* seq_ptr, std::uint32_t ts) noexcept {
+        decoder_.ApplySequence(seq_ptr, bsp::adc::AdcDma::kAdc1RanksPerSequence,
+                               ::app::config_sensors::kAdc1SensorIdByRank, analog_group_, ts);
+      });
+}
+
+void AnalogAcquisitionTask::ProcessAdc2Frame(const bsp::adc::AdcFrameDescriptor& desc) noexcept {
+  const std::uint16_t sequences_per_half_buffer =
+      static_cast<std::uint16_t>(desc.element_count / bsp::adc::AdcDma::kAdc2RanksPerSequence);
+  const std::uint32_t ticks_per_sequence = ComputeTicksPerSequence(
+      desc.timestamp_ticks, ::app::config::ANALOG_ADC12_TICKS_PER_SEQUENCE_ESTIMATE,
+      sequences_per_half_buffer, has_prev_adc2_timestamp_, prev_adc2_timestamp_);
+
+  const auto* values = static_cast<const std::uint16_t*>(desc.data);
+  ForEachTimestampedSequenceInHalfBuffer<std::uint16_t, bsp::adc::AdcDma::kAdc2RanksPerSequence>(
+      values, desc.timestamp_ticks, ticks_per_sequence, sequences_per_half_buffer,
+      [this](const std::uint16_t* seq_ptr, std::uint32_t ts) noexcept {
+        decoder_.ApplySequence(seq_ptr, bsp::adc::AdcDma::kAdc2RanksPerSequence,
+                               ::app::config_sensors::kAdc2SensorIdByRank, analog_group_, ts);
       });
 }
 
 void AnalogAcquisitionTask::ProcessAdc3Frame(const bsp::adc::AdcFrameDescriptor& desc) noexcept {
+  const std::uint16_t sequences_per_half_buffer =
+      static_cast<std::uint16_t>(desc.element_count / bsp::adc::AdcDma::kAdc3RanksPerSequence);
   const std::uint32_t ticks_per_sequence = ComputeTicksPerSequence(
       desc.timestamp_ticks, ::app::config::ANALOG_ADC3_TICKS_PER_SEQUENCE_ESTIMATE,
-      has_prev_adc3_timestamp_, prev_adc3_timestamp_);
+      sequences_per_half_buffer, has_prev_adc3_timestamp_, prev_adc3_timestamp_);
 
   const auto* values = static_cast<const std::uint16_t*>(desc.data);
   ForEachTimestampedSequenceInHalfBuffer<std::uint16_t, bsp::adc::AdcDma::kAdc3RanksPerSequence>(
-      values, desc.timestamp_ticks, ticks_per_sequence,
+      values, desc.timestamp_ticks, ticks_per_sequence, sequences_per_half_buffer,
       [this](const std::uint16_t* seq_ptr, std::uint32_t ts) noexcept {
-        adc3_decoder_.ApplySequence(seq_ptr, bsp::adc::AdcDma::kAdc3RanksPerSequence, adc3_group_,
-                                    ts);
+        decoder_.ApplySequence(seq_ptr, bsp::adc::AdcDma::kAdc3RanksPerSequence,
+                               ::app::config_sensors::kAdc3SensorIdByRank, analog_group_, ts);
       });
 }
 
 void AnalogAcquisitionTask::ProcessFrame(const bsp::adc::AdcFrameDescriptor& desc) noexcept {
-  if (desc.group == bsp::adc::AdcGroup::kAdc12) {
-    ProcessAdc12Frame(desc);
+  if (desc.group == bsp::adc::AdcGroup::kAdc1) {
+    ProcessAdc1Frame(desc);
+    return;
+  }
+  if (desc.group == bsp::adc::AdcGroup::kAdc2) {
+    ProcessAdc2Frame(desc);
     return;
   }
   if (desc.group == bsp::adc::AdcGroup::kAdc3) {

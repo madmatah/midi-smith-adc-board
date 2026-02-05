@@ -61,8 +61,7 @@ domain::sensors::SensorRegistry& SensorsRegistry() noexcept {
 using Filter = app::config::AnalogSensorFilter;
 using FilteredSensorGroup = domain::sensors::FilteringSensorGroup<Filter>;
 
-void StartAnalogAcquisitionTask(FilteredSensorGroup& adc12_group,
-                                FilteredSensorGroup& adc3_group) noexcept {
+void StartAnalogAcquisitionTask(FilteredSensorGroup& analog_group) noexcept {
   static os::Queue<bsp::adc::AdcFrameDescriptor, 8> adc_frame_queue;
   static bsp::adc::AdcDma adc_dma(adc_frame_queue);
   static bsp::time::TimestampCounter timestamp_counter = bsp::time::CreateTim2TimestampCounter();
@@ -74,7 +73,7 @@ void StartAnalogAcquisitionTask(FilteredSensorGroup& adc12_group,
   if (!analog_constructed) {
     analog_task_ptr = new (analog_task_storage) app::Tasks::AnalogAcquisitionTask(
         adc_frame_queue, AdcControlQueue(), bsp::pins::TiaShutdown(), adc_dma, timestamp_counter,
-        AdcState(), adc12_group, adc3_group);
+        AdcState(), analog_group);
     analog_constructed = true;
   } else {
     analog_task_ptr = reinterpret_cast<app::Tasks::AnalogAcquisitionTask*>(analog_task_storage);
@@ -95,35 +94,29 @@ SensorsContext CreateSensorsContext() noexcept {
 }
 
 AdcControlContext CreateAnalogSubsystem() noexcept {
-  static_assert(
-      app::config_sensors::kAdc12ChannelCount == 2u * bsp::adc::AdcDma::kAdc12RanksPerSequence,
-      "ADC12 mapping size must match AdcDma ranks");
-  static_assert(app::config_sensors::kAdc3ChannelCount == bsp::adc::AdcDma::kAdc3RanksPerSequence,
-                "ADC3 mapping size must match AdcDma ranks");
+  static_assert(app::config_sensors::kSensorCount > 0u, "Sensor count must be > 0");
+  static_assert(app::config_sensors::kSensorCount == 22u, "Expected 22 sensors");
+  static_assert(app::config_sensors::kAdc1RankCount == bsp::adc::AdcDma::kAdc1RanksPerSequence,
+                "ADC1 rank count must match AdcDma ranks");
+  static_assert(app::config_sensors::kAdc2RankCount == bsp::adc::AdcDma::kAdc2RanksPerSequence,
+                "ADC2 rank count must match AdcDma ranks");
+  static_assert(app::config_sensors::kAdc3RankCount == bsp::adc::AdcDma::kAdc3RanksPerSequence,
+                "ADC3 rank count must match AdcDma ranks");
 
-  static domain::sensors::Sensor* adc12_ptrs[app::config_sensors::kAdc12ChannelCount];
-  static domain::sensors::Sensor* adc3_ptrs[app::config_sensors::kAdc3ChannelCount];
-  static std::array<Filter, app::config_sensors::kAdc12ChannelCount> adc12_filters{};
-  static std::array<Filter, app::config_sensors::kAdc3ChannelCount> adc3_filters{};
-  static std::array<std::uint8_t, app::config_sensors::kAdc12ChannelCount> adc12_filter_phases{};
-  static std::array<std::uint8_t, app::config_sensors::kAdc3ChannelCount> adc3_filter_phases{};
+  static domain::sensors::Sensor* sensors_ptrs[app::config_sensors::kSensorCount];
+  static std::array<Filter, app::config_sensors::kSensorCount> filters{};
+  static std::array<std::uint8_t, app::config_sensors::kSensorCount> filter_phases{};
 
   domain::sensors::SensorRegistry& registry = SensorsRegistry();
-  for (std::size_t i = 0; i < app::config_sensors::kAdc12ChannelCount; ++i) {
-    adc12_ptrs[i] = registry.FindById(app::config_sensors::kAdc12SensorIds[i]);
-  }
-  for (std::size_t i = 0; i < app::config_sensors::kAdc3ChannelCount; ++i) {
-    adc3_ptrs[i] = registry.FindById(app::config_sensors::kAdc3SensorIds[i]);
+  for (std::size_t i = 0; i < app::config_sensors::kSensorCount; ++i) {
+    sensors_ptrs[i] = registry.FindById(app::config_sensors::kSensorIds[i]);
   }
 
-  static FilteredSensorGroup adc12_group(
-      adc12_ptrs, adc12_filters.data(), adc12_filter_phases.data(),
-      app::config_sensors::kAdc12ChannelCount, app::config::SIGNAL_DECIMATION_FACTOR);
-  static FilteredSensorGroup adc3_group(adc3_ptrs, adc3_filters.data(), adc3_filter_phases.data(),
-                                        app::config_sensors::kAdc3ChannelCount,
-                                        app::config::SIGNAL_DECIMATION_FACTOR);
+  static FilteredSensorGroup analog_group(sensors_ptrs, filters.data(), filter_phases.data(),
+                                          app::config_sensors::kSensorCount,
+                                          app::config::SIGNAL_DECIMATION_FACTOR);
 
-  StartAnalogAcquisitionTask(adc12_group, adc3_group);
+  StartAnalogAcquisitionTask(analog_group);
   return AdcControlContext{AdcControl()};
 }
 

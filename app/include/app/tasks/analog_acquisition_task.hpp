@@ -4,8 +4,8 @@
 
 #include "app/analog/acquisition_command.hpp"
 #include "app/analog/acquisition_state.hpp"
-#include "app/analog/adc12_frame_decoder.hpp"
-#include "app/analog/adc3_frame_decoder.hpp"
+#include "app/analog/adc_rank_mapped_frame_decoder.hpp"
+#include "app/config/sensors.hpp"
 #include "app/config/signal_filtering.hpp"
 #include "app/time/timestamp_counter_requirements.hpp"
 #include "bsp/adc/adc_dma.hpp"
@@ -29,7 +29,7 @@ class AnalogAcquisitionTask {
                         bsp::GpioRequirements& tia_shutdown, bsp::adc::AdcDma& adc_dma,
                         app::time::TimestampCounterRequirements& timestamp_counter,
                         volatile app::analog::AcquisitionState& state,
-                        FilteredSensorGroup& adc12_group, FilteredSensorGroup& adc3_group) noexcept;
+                        FilteredSensorGroup& analog_group) noexcept;
 
   bool start() noexcept;
 
@@ -43,7 +43,8 @@ class AnalogAcquisitionTask {
   void HandleEnabledState() noexcept;
   bool TryHandleDisableRequestWhileEnabled() noexcept;
   void ProcessFrame(const bsp::adc::AdcFrameDescriptor& desc) noexcept;
-  void ProcessAdc12Frame(const bsp::adc::AdcFrameDescriptor& desc) noexcept;
+  void ProcessAdc1Frame(const bsp::adc::AdcFrameDescriptor& desc) noexcept;
+  void ProcessAdc2Frame(const bsp::adc::AdcFrameDescriptor& desc) noexcept;
   void ProcessAdc3Frame(const bsp::adc::AdcFrameDescriptor& desc) noexcept;
 
   os::Queue<bsp::adc::AdcFrameDescriptor, 8>& queue_;
@@ -52,18 +53,19 @@ class AnalogAcquisitionTask {
   bsp::adc::AdcDma& adc_dma_;
   app::time::TimestampCounterRequirements& timestamp_counter_;
   volatile app::analog::AcquisitionState& state_;
-  FilteredSensorGroup& adc12_group_;
-  FilteredSensorGroup& adc3_group_;
+  FilteredSensorGroup& analog_group_;
 
-  app::analog::Adc12FrameDecoder adc12_decoder_{};
-  app::analog::Adc3FrameDecoder adc3_decoder_{};
+  app::analog::AdcRankMappedFrameDecoder decoder_{};
 
-  std::uint32_t last_adc12_sequence_id_ = 0;
+  std::uint32_t last_adc1_sequence_id_ = 0;
+  std::uint32_t last_adc2_sequence_id_ = 0;
   std::uint32_t last_adc3_sequence_id_ = 0;
 
-  bool has_prev_adc12_timestamp_ = false;
+  bool has_prev_adc1_timestamp_ = false;
+  bool has_prev_adc2_timestamp_ = false;
   bool has_prev_adc3_timestamp_ = false;
-  std::uint32_t prev_adc12_timestamp_ = 0;
+  std::uint32_t prev_adc1_timestamp_ = 0;
+  std::uint32_t prev_adc2_timestamp_ = 0;
   std::uint32_t prev_adc3_timestamp_ = 0;
 };
 

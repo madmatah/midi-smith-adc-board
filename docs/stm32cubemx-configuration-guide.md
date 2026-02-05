@@ -121,6 +121,65 @@ Notes:
 
 ---
 
+## 3.2 ADC Trigger Timer Configuration (TIM3, TIM4)
+
+Objective: provide hardware triggers for ADC1/ADC2/ADC3 conversions while keeping the trigger
+period configurable from firmware (`app/include/app/config/analog_acquisition.hpp`).
+
+Notes:
+
+- TIM3 and TIM4 are reserved for analog acquisition triggering. Do not assign them to PWM or other
+  subsystems.
+- Do not enable TIM3/TIM4 interrupts. ADC triggering is fully hardware-driven.
+
+### TIM3 (ADC1 + ADC2 triggers)
+**[`Timers` > `TIM3`]**
+
+In the **Mode** tab:
+
+- **Clock Source**: `Internal Clock`
+
+In the **Parameter Settings** tab:
+
+- **Counter Mode**: `Up`
+- **Prescaler (PSC)**: `239` (with a timer clock at 240 MHz, this gives 240 / (239 + 1) = 1 MHz).
+- **Counter Period (ARR)**: `142` (gives ~7 kHz update rate, matching 1 kHz per-channel on ADC1/ADC2).
+
+In the **Trigger Output (TRGO) Parameters** section:
+
+- **Trigger Event Selection (TRGO)**: `Update Event` (this is ADC1 trigger source)
+
+Configure **Channel 4** with `Output Compare No Output`
+
+Set:
+
+- **Mode**: `Toggle on match`
+- **Pulse (CCR4)**: `71`
+- **Output compare preload**: `Disabled`
+- **CH Polarity**: `High`
+
+This generates the CC4 compare event near the middle of the period (half-period phase shift), which
+desynchronizes ADC2 from ADC1.
+
+### TIM4 (ADC3 trigger)
+**[`Timers` > `TIM4`]**
+
+In the **Mode** tab:
+
+- **Clock Source**: `Internal Clock`
+
+In the **Parameter Settings** tab:
+
+- **Counter Mode**: `Up`
+- **Prescaler (PSC)**: `239` (with a timer clock at 240 MHz, this gives 240 / (239 + 1) = 1 MHz).
+- **Counter Period (ARR)**: `124` (gives 8 kHz update rate, matching 1 kHz per-channel on ADC3).
+
+In the **Trigger Output (TRGO) Parameters** section:
+
+- **Trigger Event Selection (TRGO)**: `Update Event` (this is ADC3 trigger source)
+
+---
+
 ## 4. ADC Configuration
 
 ### A. General Settings
@@ -128,19 +187,23 @@ Notes:
 
 In the **Parameter Settings** tab:
 
-* **Mode**: `Dual Regular Simultaneous mode only`.
+* **Mode**: `Independent mode`.
 * **Clock Prescaler**: `Asynchronous clock divided by 1`
 * **Resolution**: `16 bits`.
 * **Number of conversions**: `7`
 * **Scan Conversion Mode**: `Enabled`. (automatic switching)
-* **Continuous Conversion Mode**: `Enabled`.
+* **Continuous Conversion Mode**: `Disabled`.
+* **Discontinuous Conversion Mode**: `Enabled`.
+* **Number of Discontinuous Conversions**: `1`
+* **External Trigger Conversion Source**: `TIM3 TRGO` (Update Event).
+* **External Trigger Conversion Edge**: `Rising edge`.
 
 In the **DMA Settings** tab:
 
 1. Click `Add`, select `ADC1`.
 2. **Mode**: `Circular`.
-3. **Data Width (Memory)**: `Word` (32-bit).
-4. **Data Width (Peripheral)**: `Word` (32-bit).
+3. **Data Width (Memory)**: `Half Word` (16-bit).
+4. **Data Width (Peripheral)**: `Half Word` (16-bit).
 
 In the **Parameter Settings** tab:
 
@@ -151,7 +214,7 @@ In the **Parameter Settings** tab:
 In **ADC_Regular_ConversionMode** / **Ranks**:
 
 - For each **Rank**, choose the associated **Channel**.
-- Set **Sampling Time** to `64.5 Cycles` for ALL channels.
+- Set **Sampling Time** to the maximum available value.
 
 | Rank | ADC1 (Master) | Sensor |
 |:-----|:--------------|:-------|
@@ -168,19 +231,34 @@ In **ADC_Regular_ConversionMode** / **Ranks**:
 
 In the **Parameter Settings** tab:
 
-* **Mode**: `Dual Regular Simultaneous mode only`.
+* **Mode**: `Independent mode`.
 * **Clock Prescaler**: `Asynchronous clock divided by 1` 
 * **Resolution**: `16 bits`.
 * **Number of conversions**: `7`
 * **Scan Conversion Mode**: `Enabled`. (automatic switching)
-* **Continuous Conversion Mode**: `Enabled`.
+* **Continuous Conversion Mode**: `Disabled`.
+* **Discontinuous Conversion Mode**: `Enabled`.
+* **Number of Discontinuous Conversions**: `1`
+* **External Trigger Conversion Source**: `TIM3 CH4` (Compare Event).
+* **External Trigger Conversion Edge**: `Rising edge`.
 * **End of Conversion Selection**: `End of sequence conversion`.
 * **Overrun behavior**: `Overrun data preserved`.
+
+In the **DMA Settings** tab:
+
+1. Click `Add`, select `ADC2`.
+2. **Mode**: `Circular`.
+3. **Data Width (Memory)**: `Half Word` (16-bit).
+4. **Data Width (Peripheral)**: `Half Word` (16-bit).
+
+In the **Parameter Settings** tab:
+
+* **Conversion Data Management Mode**: `DMA Circular mode`
 
 In **ADC_Regular_ConversionMode** / **Ranks**:
 
 - For each **Rank**, choose the associated **Channel**.
-- Set **Sampling Time** to `64.5 Cycles` for ALL channels.
+- Set **Sampling Time** to the maximum available value.
 
 | Rank | ADC2 (Slave) | Sensor |
 |:-----|:-------------|:-------|
@@ -189,8 +267,8 @@ In **ADC_Regular_ConversionMode** / **Ranks**:
 | **3** | Channel 3 | **SEN6** |
 | **4** | Channel 18 | **SEN8** |
 | **5** | Channel 14 | **SEN10** |
-| **6** | Channel 11 | **SEN13** |
-| **7** | Channel 10 | **SEN14** |
+| **6** | Channel 11 | **SEN15** |
+| **7** | Channel 10 | **SEN16** |
 
 
 **[`Analog` > `ADC3`]**
@@ -201,7 +279,11 @@ In the **Parameter Settings** tab:
 * **Resolution**: `16 bits`.
 * **Number of conversions**: `8`
 * **Scan Conversion Mode**: `Enabled`.
-* **Continuous Conversion Mode**: `Enabled`.
+* **Continuous Conversion Mode**: `Disabled`.
+* **Discontinuous Conversion Mode**: `Enabled`.
+* **Number of Discontinuous Conversions**: `1`
+* **External Trigger Conversion Source**: `TIM4 TRGO` (Update Event).
+* **External Trigger Conversion Edge**: `Rising edge`.
 
 In the **DMA Settings** tab:
 
@@ -219,7 +301,7 @@ In the **Parameter Settings** tab:
 In **ADC_Regular_ConversionMode** / **Ranks**:
 
 - For each **Rank**, choose the associated **Channel**.
-- Set **Sampling Time** to `64.5 Cycles` for ALL channels.
+- Set **Sampling Time** to the maximum available value.
 
 | Rank | ADC3 Channel | Sensor |
 |:-----|:-------------|:-------|
@@ -233,6 +315,44 @@ In **ADC_Regular_ConversionMode** / **Ranks**:
 | **8** | Channel 9 | **SEN22** |
 
 ---
+
+### 4.1 Triggered and Staggered Acquisition (TIA Stability)
+
+Objective:
+
+- Reduce the analog load by avoiding free-running conversions.
+- Spread conversions over time (1 conversion per trigger) to avoid burst current draw on VREF+.
+- Desynchronize ADC1 vs ADC2 to avoid simultaneous sampling.
+
+Firmware behavior:
+
+- ADC1, ADC2, ADC3 run in regular scan mode but with **Discontinuous = 1**.
+- Triggers are generated by timers:
+  - ADC1: `TIM3_TRGO` (update event)
+  - ADC2: `TIM3_CC4` (compare event, phase-shifted)
+  - ADC3: `TIM4_TRGO` (update event, phase-shifted)
+- ADC calibration is performed once at startup, before starting DMA.
+
+Configuration knobs (no CubeMX regeneration required):
+
+- `app/include/app/config/config.hpp`
+  - `app/include/app/config/analog_acquisition.hpp`
+  - `ANALOG_ACQUISITION_CHANNEL_RATE_HZ`: per-channel target rate (e.g. 1000, 10000)
+  - `ANALOG_ACQUISITION_SEQUENCES_PER_HALF_BUFFER`: affects DMA interrupt rate vs latency
+  - `ANALOG_ADC2_PHASE_US`: phase shift inside the ADC1/ADC2 trigger period (0 means half-period)
+  - `ANALOG_ADC3_PHASE_US`: phase shift inside the ADC3 trigger period (0 means half-period)
+
+How to change from 1 kHz to 10 kHz:
+
+- Set `ANALOG_ACQUISITION_CHANNEL_RATE_HZ = 10000`.
+- If CPU load becomes too high, increase `ANALOG_ACQUISITION_SEQUENCES_PER_HALF_BUFFER` to reduce DMA IRQ rate.
+
+Notes:
+
+- TIM2 remains reserved for timestamping (1 MHz free-running counter).
+- TIM3 and TIM4 must be configured in CubeMX and reserved for ADC trigger generation.
+  The firmware uses `app/include/app/config/analog_acquisition.hpp` to set the effective frequency and
+  phase shifts at runtime.
 
 ## 7. Console Configuration (USART1)
 
