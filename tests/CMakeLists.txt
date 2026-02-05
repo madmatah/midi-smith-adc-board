@@ -34,8 +34,7 @@ add_executable(unit_tests
     domain/sensors/filtering_sensor_group.test.cpp
     domain/sensors/sensor_group.test.cpp
     domain/sensors/sensor_registry.test.cpp
-    app/analog/adc12_frame_decoder.test.cpp
-    app/analog/adc3_frame_decoder.test.cpp
+    app/analog/adc_rank_mapped_frame_decoder.test.cpp
     app/analog/acquisition_sequencer.test.cpp
     app/shell/commands/sensor_rtt_command.test.cpp
     ${CMAKE_SOURCE_DIR}/app/src/shell/commands/sensor_rtt_command.cpp

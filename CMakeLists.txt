@@ -95,6 +95,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     bsp/src/cortex/d3_sram_nocache_mpu.cpp
     bsp/src/adc/adc_dma.cpp
     bsp/src/adc/adc_dma_callbacks.cpp
+    bsp/src/adc/adc_trigger_schedule.cpp
     bsp/src/time/tim2_timestamp_counter.cpp
     bsp/src/gpio.cpp
     bsp/src/pins.cpp
