@@ -19,7 +19,12 @@ namespace app::config {
 
 
 // Target acquisition rate per channel
-constexpr std::uint32_t ANALOG_ACQUISITION_CHANNEL_RATE_HZ = 1000;
+constexpr std::uint32_t ANALOG_ACQUISITION_CHANNEL_RATE_HZ = 1500;
+
+// ADC kernel clock limit
+// According to AN5354, STM32H743 using 3 ADC simultaneously at 16-bit, with
+// package LQFP144, must use 7 MHz for ADC kernel clock.
+constexpr std::uint32_t ANALOG_ADC_KERNEL_CLOCK_LIMIT_HZ = 7'000'000;
 
 // Controls the DMA interrupt frequency and system responsiveness.
 // Each 'sequence' contains one measurement of all channels (7 or 8 ranks).
@@ -27,7 +32,7 @@ constexpr std::uint32_t ANALOG_ACQUISITION_CHANNEL_RATE_HZ = 1000;
 //      (e.g. ~3000 IRQ/s at 1kHz).
 // - Higher: Groups multiple scans before notifying the CPU.
 //      Reduces CPU overhead by processing data in larger batches, but adds latency.
-constexpr std::uint32_t ANALOG_ACQUISITION_SEQUENCES_PER_HALF_BUFFER = 1;
+constexpr std::uint32_t ANALOG_ACQUISITION_SEQUENCES_PER_HALF_BUFFER = 4;
 
 // Phase shifts applied to the trigger schedule.
 //
@@ -47,7 +52,16 @@ constexpr std::uint32_t ANALOG_ADC3_PHASE_US = 0;
 // The acquisition task interpolates per-sequence timestamps inside a half-buffer.
 // The first half-buffer after enabling has only one timestamp, so we use these estimates as a
 // fallback until a second timestamp is available.
-constexpr std::uint32_t ANALOG_ADC12_TICKS_PER_SEQUENCE_ESTIMATE = 1000;
-constexpr std::uint32_t ANALOG_ADC3_TICKS_PER_SEQUENCE_ESTIMATE = 1000;
+static_assert(ANALOG_ACQUISITION_CHANNEL_RATE_HZ > 0u,
+              "ANALOG_ACQUISITION_CHANNEL_RATE_HZ must be > 0");
+constexpr std::uint32_t ANALOG_TICKS_PER_SECOND = 1'000'000u;
+
+constexpr std::uint32_t ANALOG_TICKS_PER_SEQUENCE_ESTIMATE =
+    (ANALOG_TICKS_PER_SECOND + (ANALOG_ACQUISITION_CHANNEL_RATE_HZ / 2u)) /
+    ANALOG_ACQUISITION_CHANNEL_RATE_HZ;
+constexpr std::uint32_t ANALOG_ADC12_TICKS_PER_SEQUENCE_ESTIMATE =
+    ANALOG_TICKS_PER_SEQUENCE_ESTIMATE;
+constexpr std::uint32_t ANALOG_ADC3_TICKS_PER_SEQUENCE_ESTIMATE =
+    ANALOG_TICKS_PER_SEQUENCE_ESTIMATE;
 
 }  // namespace app::config
