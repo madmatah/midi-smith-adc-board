@@ -1,8 +1,9 @@
 # CubeMX Configuration Guide: ADC Board (Piano Velocity)
 
-This guide details the STM32H743ZIT6 configuration for high-speed acquisition on 22 analog channels by leveraging the parallelism of the 3 ADCs with circular DMA.
+This guide details the STM32H743ZIT6 configuration for acquisition on 22 analog channels by
+leveraging the parallelism of the 3 ADCs with circular DMA.
 
-**Objective**: Simultaneous acquisition at 75-80 kHz on 22 velocity sensors.
+**Objective**: stable 16-bit acquisition on 3 ADCs while respecting the ADC clock hard limit.
 
 ---
 
@@ -70,10 +71,11 @@ This guide details the STM32H743ZIT6 configuration for high-speed acquisition on
    * **[`Clock Configuration` tab (at the top)]**
    * **Input frequency (HSE)**: `16` MHz.
    * **System Clock Mux**: PLLCLK
-   * **SYSCLK**: Type `440` MHz (or your target frequency) and let CubeMX solve the PLLs.
-   * **PLL2P (ADC Source)**: Adjust the multiplier/divider to obtain **80 MHz**.
-      * *The ADC will run at 40 MHz after a division by 2 in its internal configuration.*
+   * **SYSCLK**: Set your target frequency  (`440` MHz) and let CubeMX solve the PLLs.
    * **ADC Clock Mux**: Select `PLL2P` in the bottom-right selector.
+   * **PLL2P (ADC kernel clock)**: Adjust PLL2 so that CubeMX shows **ADCCLK ≤ 7 MHz**.
+     This is mandatory when using **ADC1 + ADC2 + ADC3 simultaneously in 16-bit**.
+   * After saving, verify the `.ioc` contains `RCC.ADCFreq_Value` around `7000000`.
    * **FDCAN Clock Mux**: Choose `PLL1Q` to obtain a stable frequency (e.g., 80 MHz).
 
 ---
@@ -182,6 +184,26 @@ In the **Trigger Output (TRGO) Parameters** section:
 
 ## 4. ADC Configuration
 
+### 4.0 ADC clock limit and throughput
+
+When using ADC1 + ADC2 + ADC3 simultaneously at 16-bit, the ADC kernel clock must be **≤ 7 MHz** according to AN5354.
+
+With ADCCLK = 7 MHz, typical sampling durations are:
+
+| Sampling time | Duration (approx) |
+|:--|:--|
+| `64.5 cycles` | ~9.2 µs |
+| `387.5 cycles` | ~55.4 µs |
+| `810.5 cycles` | ~115.8 µs |
+
+Order-of-magnitude maximum per-channel rates (assuming 16-bit conversion overhead and 7/8 ranks) are:
+
+| Sampling time | ADC1/2 (7 ranks) | ADC3 (8 ranks) |
+|:--|:--|:--|
+| `64.5 cycles` | ~10–12 kHz | ~9–11 kHz |
+| `387.5 cycles` | ~2–3 kHz | ~2–2.5 kHz |
+| `810.5 cycles` | ~1–1.5 kHz | ~1–1.3 kHz |
+
 ### A. General Settings
 **[`Analog` > `ADC1`]**
 
@@ -214,7 +236,9 @@ In the **Parameter Settings** tab:
 In **ADC_Regular_ConversionMode** / **Ranks**:
 
 - For each **Rank**, choose the associated **Channel**.
-- Set **Sampling Time** to the maximum available value.
+- Select a **Sampling Time** based on the stability/performance trade-off:
+  - Start with `ADC_SAMPLETIME_387CYCLES_5` for stability.
+  - If the acquisition rate is too low, try `ADC_SAMPLETIME_64CYCLES_5` and re-validate the TIA.
 
 | Rank | ADC1 (Master) | Sensor |
 |:-----|:--------------|:-------|
@@ -258,7 +282,7 @@ In the **Parameter Settings** tab:
 In **ADC_Regular_ConversionMode** / **Ranks**:
 
 - For each **Rank**, choose the associated **Channel**.
-- Set **Sampling Time** to the maximum available value.
+- Select the same **Sampling Time** strategy as ADC1.
 
 | Rank | ADC2 (Slave) | Sensor |
 |:-----|:-------------|:-------|
@@ -275,7 +299,8 @@ In **ADC_Regular_ConversionMode** / **Ranks**:
 
 In the **Parameter Settings** tab:
 
-* **Clock Prescaler**: (The parameter does not exist for ADC3, which is why we set a prescaler of 1 for ADC1+2. Everyone will be at the same speed.)
+* **Clock Prescaler**: (The parameter does not exist for ADC3 in this configuration. The ADC
+  frequency is controlled by the **ADCCLK** value from the Clock Tree.)
 * **Resolution**: `16 bits`.
 * **Number of conversions**: `8`
 * **Scan Conversion Mode**: `Enabled`.
@@ -301,7 +326,7 @@ In the **Parameter Settings** tab:
 In **ADC_Regular_ConversionMode** / **Ranks**:
 
 - For each **Rank**, choose the associated **Channel**.
-- Set **Sampling Time** to the maximum available value.
+- Select the same **Sampling Time** strategy as ADC1/ADC2.
 
 | Rank | ADC3 Channel | Sensor |
 |:-----|:-------------|:-------|
@@ -342,9 +367,13 @@ Configuration knobs (no CubeMX regeneration required):
   - `ANALOG_ADC2_PHASE_US`: phase shift inside the ADC1/ADC2 trigger period (0 means half-period)
   - `ANALOG_ADC3_PHASE_US`: phase shift inside the ADC3 trigger period (0 means half-period)
 
-How to change from 1 kHz to 10 kHz:
+How to change the acquisition rate:
 
-- Set `ANALOG_ACQUISITION_CHANNEL_RATE_HZ = 10000`.
+- Set `ANALOG_ACQUISITION_CHANNEL_RATE_HZ` in `app/include/app/config/analog_acquisition.hpp`.
+- Keep in mind that the maximum achievable rate depends on:
+  - ADCCLK (must be ≤ 7 MHz in 16-bit on 3 ADCs)
+  - Sampling time (64.5 vs 387.5 cycles is a large difference)
+  - Rank count (7 ranks on ADC1/2, 8 ranks on ADC3)
 - If CPU load becomes too high, increase `ANALOG_ACQUISITION_SEQUENCES_PER_HALF_BUFFER` to reduce DMA IRQ rate.
 
 Notes:

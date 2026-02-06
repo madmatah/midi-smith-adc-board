@@ -1,5 +1,6 @@
 #include "bsp/adc/adc_dma.hpp"
 
+#include "SEGGER_RTT.h"
 #include "adc.h"
 #include "app/config/analog_acquisition.hpp"
 #include "bsp/adc/adc_trigger_schedule.hpp"
@@ -46,6 +47,19 @@ bool ConfigureAdc2Dma() noexcept {
   return (hadc2.DMA_Handle != nullptr);
 }
 
+bool IsAdcKernelClockWithinLimit() noexcept {
+  const std::uint32_t adc_kernel_clock_hz = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_ADC);
+  if (adc_kernel_clock_hz == 0u) {
+    return false;
+  }
+  if (adc_kernel_clock_hz > ::app::config::ANALOG_ADC_KERNEL_CLOCK_LIMIT_HZ) {
+    (void) SEGGER_RTT_printf(0u, "ADC kernel clock too high: %lu Hz (limit: %lu Hz)\r\n",
+                             adc_kernel_clock_hz, ::app::config::ANALOG_ADC_KERNEL_CLOCK_LIMIT_HZ);
+    return false;
+  }
+  return true;
+}
+
 bool CalibrateAdcsOnce() noexcept {
   static bool calibrated = false;
   if (calibrated) {
@@ -80,6 +94,11 @@ AdcDma::AdcDma(os::Queue<AdcFrameDescriptor, 8>& queue) noexcept : queue_(queue)
 bool AdcDma::Start() noexcept {
   Stop();
 
+  if (!IsAdcKernelClockWithinLimit()) {
+    Stop();
+    return false;
+  }
+
   if (!ConfigureAdc2Dma()) {
     Stop();
     return false;
@@ -92,6 +111,11 @@ bool AdcDma::Start() noexcept {
   }
 
   const std::uint16_t sequences_per_half_buffer = SequencesPerHalfBufferFromConfig();
+  (void) SEGGER_RTT_printf(
+      0u, "ADC start: kernel=%lu Hz rate=%lu Hz seq_half=%u\r\n",
+      static_cast<unsigned long>(HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_ADC)),
+      static_cast<unsigned long>(::app::config::ANALOG_ACQUISITION_CHANNEL_RATE_HZ),
+      static_cast<unsigned>(sequences_per_half_buffer));
 
   adc1_halfwords_per_half_buffer_ =
       static_cast<std::uint16_t>(sequences_per_half_buffer * kAdc1RanksPerSequence);
