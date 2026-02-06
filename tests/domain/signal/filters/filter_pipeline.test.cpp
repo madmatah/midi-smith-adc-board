@@ -3,6 +3,7 @@
 #include "domain/signal/filters/filter_pipeline.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cstdint>
 
 #include "domain/sensors/filtering_sensor_group.hpp"
@@ -15,14 +16,16 @@ class PlusOneFilter {
  public:
   void Reset() noexcept {}
 
-  std::uint16_t Apply(std::uint16_t sample) noexcept {
-    return static_cast<std::uint16_t>(sample + 1u);
+  float Apply(float sample) noexcept {
+    return sample + 1.0f;
   }
 };
 
 }  // namespace
 
 TEST_CASE("The FilterPipeline class") {
+  using Catch::Matchers::WithinAbs;
+
   SECTION("The type traits") {
     SECTION("When built from Apply-only stages") {
       SECTION("Should not expose Push or ComputeOrRaw") {
@@ -51,7 +54,7 @@ TEST_CASE("The FilterPipeline class") {
     SECTION("When built from Apply-only stages") {
       SECTION("Should apply all stages in order") {
         domain::signal::filters::FilterPipeline<PlusOneFilter, PlusOneFilter> pipeline;
-        REQUIRE(pipeline.Apply(10) == 12);
+        REQUIRE_THAT(pipeline.Apply(10.0f), WithinAbs(12.0f, 0.001f));
       }
     }
   }
@@ -67,17 +70,17 @@ TEST_CASE("The FilterPipeline class") {
         Ema ema_ref;
         Sg sg_ref;
 
-        const std::uint16_t samples[] = {10, 20, 30, 40, 50, 60, 70, 80, 90};
-        for (const std::uint16_t raw : samples) {
+        const float samples[] = {10.0f, 20.0f, 30.0f, 40.0f, 50.0f, 60.0f, 70.0f, 80.0f, 90.0f};
+        for (const float raw : samples) {
           pipeline.Push(raw);
-          const std::uint16_t pipeline_out = pipeline.ComputeOrRaw(raw);
+          const float pipeline_out = pipeline.ComputeOrRaw(raw);
 
           ema_ref.Push(raw);
-          const std::uint16_t ema_out = ema_ref.ComputeOrRaw(raw);
+          const float ema_out = ema_ref.ComputeOrRaw(raw);
           sg_ref.Push(ema_out);
-          const std::uint16_t expected = sg_ref.ComputeOrRaw(ema_out);
+          const float expected = sg_ref.ComputeOrRaw(ema_out);
 
-          REQUIRE(pipeline_out == expected);
+          REQUIRE_THAT(pipeline_out, WithinAbs(expected, 0.001f));
         }
       }
     }
@@ -91,12 +94,12 @@ TEST_CASE("The FilterPipeline class") {
                                                     domain::signal::filters::Sg5Smoother>;
 
         Pipeline pipeline;
-        pipeline.Push(1234);
-        (void) pipeline.ComputeOrRaw(1234);
+        pipeline.Push(1234.0f);
+        (void) pipeline.ComputeOrRaw(1234.0f);
         pipeline.Reset();
 
-        pipeline.Push(2222);
-        REQUIRE(pipeline.ComputeOrRaw(2222) == 2222);
+        pipeline.Push(2222.0f);
+        REQUIRE_THAT(pipeline.ComputeOrRaw(2222.0f), WithinAbs(2222.0f, 0.001f));
       }
     }
   }

@@ -3,6 +3,7 @@
 #include "domain/signal/filters/ema_filter.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cstdint>
 
 TEST_CASE("The EmaFilterRatio class") {
@@ -10,21 +11,23 @@ TEST_CASE("The EmaFilterRatio class") {
     SECTION("When alpha is 1") {
       SECTION("Should return the input sample") {
         domain::signal::filters::EmaFilterRatio<1, 1> filter;
+        using Catch::Matchers::WithinRel;
 
-        REQUIRE(filter.Apply(100) == 100);
-        REQUIRE(filter.Apply(200) == 200);
-        REQUIRE(filter.Apply(1234) == 1234);
-        REQUIRE(filter.Apply(65535) == 65535);
+        REQUIRE_THAT(filter.Apply(100.0f), WithinRel(100.0f));
+        REQUIRE_THAT(filter.Apply(200.0f), WithinRel(200.0f));
+        REQUIRE_THAT(filter.Apply(1234.0f), WithinRel(1234.0f));
+        REQUIRE_THAT(filter.Apply(65535.0f), WithinRel(65535.0f));
       }
     }
 
     SECTION("When alpha is 0") {
       SECTION("Should keep the first value") {
         domain::signal::filters::EmaFilterRatio<0, 1> filter;
+        using Catch::Matchers::WithinRel;
 
-        REQUIRE(filter.Apply(1234) == 1234);
-        REQUIRE(filter.Apply(4321) == 1234);
-        REQUIRE(filter.Apply(0) == 1234);
+        REQUIRE_THAT(filter.Apply(1234.0f), WithinRel(1234.0f));
+        REQUIRE_THAT(filter.Apply(4321.0f), WithinRel(1234.0f));
+        REQUIRE_THAT(filter.Apply(0.0f), WithinRel(1234.0f));
       }
     }
 
@@ -32,15 +35,16 @@ TEST_CASE("The EmaFilterRatio class") {
       SECTION("Should converge monotonically to a step without overshoot") {
         domain::signal::filters::EmaFilterRatio<1, 4> filter;
 
-        REQUIRE(filter.Apply(0) == 0);
+        using Catch::Matchers::WithinAbs;
+        REQUIRE_THAT(filter.Apply(0.0f), WithinAbs(0.0f, 0.0001f));
 
-        std::uint16_t prev = filter.Apply(1000);
-        REQUIRE(prev <= 1000);
+        float prev = filter.Apply(1000.0f);
+        REQUIRE(prev <= 1000.0f);
 
         for (std::uint32_t i = 0; i < 20; ++i) {
-          const std::uint16_t now = filter.Apply(1000);
+          const float now = filter.Apply(1000.0f);
           REQUIRE(now >= prev);
-          REQUIRE(now <= 1000);
+          REQUIRE(now <= 1000.0f);
           prev = now;
         }
       }
@@ -52,10 +56,10 @@ TEST_CASE("The EmaFilterRatio class") {
       SECTION("Should restore the raw fallback behavior") {
         domain::signal::filters::EmaFilterRatio<1, 2> filter;
 
-        REQUIRE(filter.Apply(1111) == 1111);
+        REQUIRE_THAT(filter.Apply(1111.0f), Catch::Matchers::WithinRel(1111.0f));
         filter.Reset();
 
-        REQUIRE(filter.ComputeOrRaw(2222) == 2222);
+        REQUIRE_THAT(filter.ComputeOrRaw(2222.0f), Catch::Matchers::WithinRel(2222.0f));
       }
     }
   }

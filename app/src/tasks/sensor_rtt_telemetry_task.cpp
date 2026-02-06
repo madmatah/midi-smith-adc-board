@@ -110,11 +110,11 @@ void SensorRttTelemetryTask::run() noexcept {
         telemetry_sender_.Send(static_cast<std::uint32_t>(sensor->last_raw_value()));
         break;
       case domain::sensors::SensorRttMode::kFiltered:
-        telemetry_sender_.Send(static_cast<std::uint32_t>(sensor->last_filtered_value()));
+        telemetry_sender_.Send(static_cast<std::uint32_t>(sensor->last_filtered_value_int()));
         break;
       case domain::sensors::SensorRttMode::kBoth: {
         const std::uint32_t raw = sensor->last_raw_value();
-        const std::uint32_t filtered = sensor->last_filtered_value();
+        const std::uint32_t filtered = sensor->last_filtered_value_int();
         telemetry_sender_.Send((raw << 16) | filtered);
         break;
       }
