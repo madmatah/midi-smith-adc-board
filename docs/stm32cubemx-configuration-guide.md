@@ -151,13 +151,13 @@ In the **Trigger Output (TRGO) Parameters** section:
 
 - **Trigger Event Selection (TRGO)**: `Update Event` (this is ADC1 trigger source)
 
-Configure **Channel 4** with `Output Compare No Output`
+Configure **Channel 4** with `PWM Generation CH4`
 
 Set:
 
-- **Mode**: `Toggle on match`
+- **Mode**: `PWM Mode 1`
 - **Pulse (CCR4)**: `71`
-- **Output compare preload**: `Disabled`
+- **Output compare preload**: `Enable`
 - **CH Polarity**: `High`
 
 This generates the CC4 compare event near the middle of the period (half-period phase shift), which
