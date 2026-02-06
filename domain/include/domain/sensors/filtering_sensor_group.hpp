@@ -16,7 +16,7 @@ template <typename T, typename = void>
 struct HasPush : std::false_type {};
 
 template <typename T>
-struct HasPush<T, std::void_t<decltype(std::declval<T&>().Push(std::declval<std::uint16_t>()))>>
+struct HasPush<T, std::void_t<decltype(std::declval<T&>().Push(std::declval<float>()))>>
     : std::true_type {};
 
 template <typename T, typename = void>
@@ -24,7 +24,7 @@ struct HasComputeOrRaw : std::false_type {};
 
 template <typename T>
 struct HasComputeOrRaw<
-    T, std::void_t<decltype(std::declval<const T&>().ComputeOrRaw(std::declval<std::uint16_t>()))>>
+    T, std::void_t<decltype(std::declval<const T&>().ComputeOrRaw(std::declval<float>()))>>
     : std::true_type {};
 
 }  // namespace filtering_sensor_group_detail
@@ -66,17 +66,17 @@ class FilteringSensorGroup {
     FilterT& filter = filters_[index];
     if constexpr (filtering_sensor_group_detail::HasPush<FilterT>::value &&
                   filtering_sensor_group_detail::HasComputeOrRaw<FilterT>::value) {
-      filter.Push(raw_value);
+      filter.Push(static_cast<float>(raw_value));
 
       if (!ShouldComputeFilteredValue(index)) {
         s->UpdateRaw(raw_value, timestamp_ticks);
         return;
       }
 
-      const std::uint16_t filtered_value = filter.ComputeOrRaw(raw_value);
+      const float filtered_value = filter.ComputeOrRaw(static_cast<float>(raw_value));
       s->Update(raw_value, filtered_value, timestamp_ticks);
     } else {
-      const std::uint16_t filtered_value = filter.Apply(raw_value);
+      const float filtered_value = filter.Apply(static_cast<float>(raw_value));
       s->Update(raw_value, filtered_value, timestamp_ticks);
     }
   }

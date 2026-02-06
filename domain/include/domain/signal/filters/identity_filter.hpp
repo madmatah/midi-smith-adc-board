@@ -6,7 +6,7 @@ namespace domain::signal::filters {
 
 class IdentityFilter {
  public:
-  std::uint16_t Apply(std::uint16_t sample) noexcept {
+  float Apply(float sample) noexcept {
     return sample;
   }
 };

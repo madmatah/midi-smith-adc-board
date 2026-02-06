@@ -13,14 +13,14 @@ template <typename T, typename = void>
 struct HasApply : std::false_type {};
 
 template <typename T>
-struct HasApply<T, std::void_t<decltype(std::declval<T&>().Apply(std::declval<std::uint16_t>()))>>
+struct HasApply<T, std::void_t<decltype(std::declval<T&>().Apply(std::declval<float>()))>>
     : std::true_type {};
 
 template <typename T, typename = void>
 struct HasPush : std::false_type {};
 
 template <typename T>
-struct HasPush<T, std::void_t<decltype(std::declval<T&>().Push(std::declval<std::uint16_t>()))>>
+struct HasPush<T, std::void_t<decltype(std::declval<T&>().Push(std::declval<float>()))>>
     : std::true_type {};
 
 template <typename T, typename = void>
@@ -28,7 +28,7 @@ struct HasComputeOrRaw : std::false_type {};
 
 template <typename T>
 struct HasComputeOrRaw<
-    T, std::void_t<decltype(std::declval<const T&>().ComputeOrRaw(std::declval<std::uint16_t>()))>>
+    T, std::void_t<decltype(std::declval<const T&>().ComputeOrRaw(std::declval<float>()))>>
     : std::true_type {};
 
 template <typename T, typename = void>
@@ -51,7 +51,7 @@ inline void ResetIfPresent(FilterT& filter) noexcept {
 }
 
 template <typename FilterT>
-inline std::uint16_t ApplyOrPushCompute(FilterT& filter, std::uint16_t input) noexcept {
+inline float ApplyOrPushCompute(FilterT& filter, float input) noexcept {
   if constexpr (IsTwoPhaseV<FilterT>) {
     filter.Push(input);
     return filter.ComputeOrRaw(input);
@@ -70,15 +70,14 @@ inline void ResetAll(TupleT& filters, std::index_sequence<kIs...>) noexcept {
 }
 
 template <typename TupleT, std::size_t... kIs>
-inline std::uint16_t ApplyAll(TupleT& filters, std::uint16_t input,
-                              std::index_sequence<kIs...>) noexcept {
-  std::uint16_t x = input;
+inline float ApplyAll(TupleT& filters, float input, std::index_sequence<kIs...>) noexcept {
+  float x = input;
   (void) std::initializer_list<int>{((x = ApplyOrPushCompute(std::get<kIs>(filters), x)), 0)...};
   return x;
 }
 
 template <typename TupleT, std::size_t kLastIndex>
-inline std::uint16_t PushThroughPreStages(TupleT& filters, std::uint16_t input) noexcept {
+inline float PushThroughPreStages(TupleT& filters, float input) noexcept {
   if constexpr (kLastIndex == 0u) {
     return input;
   } else {
@@ -118,12 +117,16 @@ class FilterPipeline : public FilterPipelineBase<FilterTs...> {
   void Reset() noexcept {
     this->ResetAllStages();
     has_last_input_ = false;
-    last_input_ = 0;
+    last_input_ = 0.0f;
     has_last_output_ = false;
-    last_output_ = 0;
+    last_output_ = 0.0f;
   }
 
-  std::uint16_t Apply(std::uint16_t sample) noexcept {
+  float Apply(std::uint16_t sample) noexcept {
+    return Apply(static_cast<float>(sample));
+  }
+
+  float Apply(float sample) noexcept {
     if constexpr (kHasTwoPhaseStage) {
       Push(sample);
       return ComputeOrRaw(sample);
@@ -136,7 +139,12 @@ class FilterPipeline : public FilterPipelineBase<FilterTs...> {
 
   template <bool kEnable = kHasTwoPhaseStage, typename = std::enable_if_t<kEnable>>
   void Push(std::uint16_t sample) noexcept {
-    std::uint16_t x = filter_pipeline_detail::PushThroughPreStages<
+    Push(static_cast<float>(sample));
+  }
+
+  template <bool kEnable = kHasTwoPhaseStage, typename = std::enable_if_t<kEnable>>
+  void Push(float sample) noexcept {
+    float x = filter_pipeline_detail::PushThroughPreStages<
         typename FilterPipelineBase<FilterTs...>::FiltersTuple,
         FilterPipelineBase<FilterTs...>::kLastIndex>(this->filters_, sample);
 
@@ -158,7 +166,7 @@ class FilterPipeline : public FilterPipelineBase<FilterTs...> {
   }
 
   template <bool kEnable = kHasTwoPhaseStage, typename = std::enable_if_t<kEnable>>
-  std::uint16_t ComputeOrRaw(std::uint16_t raw_fallback) const noexcept {
+  float ComputeOrRaw(float raw_fallback) const noexcept {
     if (!has_last_input_) {
       return raw_fallback;
     }
@@ -179,9 +187,9 @@ class FilterPipeline : public FilterPipelineBase<FilterTs...> {
 
  private:
   bool has_last_input_ = false;
-  std::uint16_t last_input_ = 0;
+  float last_input_ = 0.0f;
   bool has_last_output_ = false;
-  std::uint16_t last_output_ = 0;
+  float last_output_ = 0.0f;
 };
 
 }  // namespace domain::signal::filters
