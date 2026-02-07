@@ -19,12 +19,13 @@ namespace app::config {
 
 
 // Target acquisition rate per channel
-constexpr std::uint32_t ANALOG_ACQUISITION_CHANNEL_RATE_HZ = 1500;
+constexpr std::uint32_t ANALOG_ACQUISITION_CHANNEL_RATE_HZ = 1000;
 
 // ADC kernel clock limit
 // According to AN5354, STM32H743 using 3 ADC simultaneously at 16-bit, with
 // package LQFP144, must use 7 MHz for ADC kernel clock.
-constexpr std::uint32_t ANALOG_ADC_KERNEL_CLOCK_LIMIT_HZ = 7'000'000;
+// After testing, we can go up to 11.4 MHz without issues.
+constexpr std::uint32_t ANALOG_ADC_KERNEL_CLOCK_LIMIT_HZ = 12'000'000;
 
 // Controls the DMA interrupt frequency and system responsiveness.
 // Each 'sequence' contains one measurement of all channels (7 or 8 ranks).
@@ -32,7 +33,7 @@ constexpr std::uint32_t ANALOG_ADC_KERNEL_CLOCK_LIMIT_HZ = 7'000'000;
 //      (e.g. ~3000 IRQ/s at 1kHz).
 // - Higher: Groups multiple scans before notifying the CPU.
 //      Reduces CPU overhead by processing data in larger batches, but adds latency.
-constexpr std::uint32_t ANALOG_ACQUISITION_SEQUENCES_PER_HALF_BUFFER = 4;
+constexpr std::uint32_t ANALOG_ACQUISITION_SEQUENCES_PER_HALF_BUFFER = 1;
 
 // Phase shifts applied to the trigger schedule.
 //

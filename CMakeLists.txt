@@ -139,11 +139,22 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
 # Remove wrong libob.a library dependency when using cpp files
 list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 
+# CMSIS-DSP (GCC, Cortex-M7 little-endian, single-precision FPU)
+set(CMSIS_DSP_LIB
+    "${CMAKE_SOURCE_DIR}/Drivers/CMSIS/DSP/Lib/GCC/libarm_cortexM7lfsp_math.a"
+)
+
+# Optional (performance / best practices CMSIS-DSP)
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
+    ARM_MATH_CM7
+)
+
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+    "${CMSIS_DSP_LIB}"
 )
 
 add_dependencies(${CMAKE_PROJECT_NAME} version_check)
