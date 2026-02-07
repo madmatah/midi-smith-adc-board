@@ -35,6 +35,7 @@ class RttClient:
         self.total_bytes_received = 0
         self._last_reconnect_attempt_time = 0
         self._reconnect_interval_seconds = 2.0
+        self._buffer = bytearray()
 
     def __enter__(self):
         self.connect()
@@ -58,7 +59,7 @@ class RttClient:
             return False
 
     def receive_data(self, buffer_size: int = 8192) -> Optional[bytes]:
-        """Receives raw data from the socket in a non-blocking way."""
+        """Receives raw data from the socket and appends it to the internal buffer."""
         if not self.is_connected:
             self._attempt_reconnect_if_needed()
             return None
@@ -69,7 +70,15 @@ class RttClient:
                 self.close()
                 return None
             self.total_bytes_received += len(data)
-            return data
+            self._buffer.extend(data)
+
+            # Return all complete 4-byte frames current in buffer
+            num_frames = len(self._buffer) // 4
+            if num_frames > 0:
+                result = bytes(self._buffer[:num_frames * 4])
+                self._buffer = self._buffer[num_frames * 4:]
+                return result
+            return None
         except BlockingIOError:
             return None
         except Exception as e:
