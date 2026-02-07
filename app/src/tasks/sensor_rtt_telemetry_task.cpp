@@ -107,10 +107,10 @@ void SensorRttTelemetryTask::run() noexcept {
 
     switch (mode_) {
       case domain::sensors::SensorRttMode::kRaw:
-        telemetry_sender_.Send(static_cast<std::uint32_t>(sensor->last_raw_value()));
+        telemetry_sender_.Send(static_cast<float>(sensor->last_raw_value()));
         break;
       case domain::sensors::SensorRttMode::kProcessed:
-        telemetry_sender_.Send(static_cast<std::uint32_t>(sensor->last_processed_value_int()));
+        telemetry_sender_.Send(sensor->last_processed_value() * 1000.0f);
         break;
     }
   }
