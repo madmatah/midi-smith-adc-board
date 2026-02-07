@@ -106,21 +106,21 @@ TEST_CASE("The SensorRttCommand class", "[app][shell][commands]") {
       SECTION("Should display status 'on' when enabled") {
         control.status.enabled = true;
         control.status.sensor_id = 1;
-        control.status.mode = domain::sensors::SensorRttMode::kFiltered;
+        control.status.mode = domain::sensors::SensorRttMode::kProcessed;
         control.status.period_ms = 10;
         char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("status")};
         cmd.Run(2, argv, stream);
-        REQUIRE(stream.GetOutput() == "on id=1 mode=filtered period_ms=10\r\n");
+        REQUIRE(stream.GetOutput() == "on id=1 mode=processed period_ms=10\r\n");
       }
     }
 
     SECTION("When called with a valid sensor id") {
-      SECTION("Should request observe for that id with default mode 'raw'") {
+      SECTION("Should request observe for that id with default mode 'processed'") {
         char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("2")};
         cmd.Run(2, argv, stream);
         REQUIRE(control.observe_requested);
         REQUIRE(control.last_observe_id == 2);
-        REQUIRE(control.last_mode == domain::sensors::SensorRttMode::kRaw);
+        REQUIRE(control.last_mode == domain::sensors::SensorRttMode::kProcessed);
         REQUIRE(stream.GetOutput() == "ok\r\n");
       }
 
@@ -134,23 +134,13 @@ TEST_CASE("The SensorRttCommand class", "[app][shell][commands]") {
         REQUIRE(stream.GetOutput() == "ok\r\n");
       }
 
-      SECTION("Should request observe for that id with mode 'filtered'") {
+      SECTION("Should request observe for that id with mode 'processed'") {
         char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("2"),
-                        const_cast<char*>("filtered")};
+                        const_cast<char*>("processed")};
         cmd.Run(3, argv, stream);
         REQUIRE(control.observe_requested);
         REQUIRE(control.last_observe_id == 2);
-        REQUIRE(control.last_mode == domain::sensors::SensorRttMode::kFiltered);
-        REQUIRE(stream.GetOutput() == "ok\r\n");
-      }
-
-      SECTION("Should request observe for that id with mode 'both'") {
-        char* argv[] = {const_cast<char*>("sensor_rtt"), const_cast<char*>("2"),
-                        const_cast<char*>("both")};
-        cmd.Run(3, argv, stream);
-        REQUIRE(control.observe_requested);
-        REQUIRE(control.last_observe_id == 2);
-        REQUIRE(control.last_mode == domain::sensors::SensorRttMode::kBoth);
+        REQUIRE(control.last_mode == domain::sensors::SensorRttMode::kProcessed);
         REQUIRE(stream.GetOutput() == "ok\r\n");
       }
 

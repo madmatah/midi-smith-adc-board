@@ -7,16 +7,16 @@
 #include <cstdint>
 
 TEST_CASE("The EmaFilterRatio class") {
-  SECTION("The Apply() method") {
+  SECTION("The Process() method") {
     SECTION("When alpha is 1") {
       SECTION("Should return the input sample") {
         domain::signal::filters::EmaFilterRatio<1, 1> filter;
         using Catch::Matchers::WithinRel;
 
-        REQUIRE_THAT(filter.Apply(100.0f), WithinRel(100.0f));
-        REQUIRE_THAT(filter.Apply(200.0f), WithinRel(200.0f));
-        REQUIRE_THAT(filter.Apply(1234.0f), WithinRel(1234.0f));
-        REQUIRE_THAT(filter.Apply(65535.0f), WithinRel(65535.0f));
+        REQUIRE_THAT(filter.Process(100.0f), WithinRel(100.0f));
+        REQUIRE_THAT(filter.Process(200.0f), WithinRel(200.0f));
+        REQUIRE_THAT(filter.Process(1234.0f), WithinRel(1234.0f));
+        REQUIRE_THAT(filter.Process(65535.0f), WithinRel(65535.0f));
       }
     }
 
@@ -25,9 +25,9 @@ TEST_CASE("The EmaFilterRatio class") {
         domain::signal::filters::EmaFilterRatio<0, 1> filter;
         using Catch::Matchers::WithinRel;
 
-        REQUIRE_THAT(filter.Apply(1234.0f), WithinRel(1234.0f));
-        REQUIRE_THAT(filter.Apply(4321.0f), WithinRel(1234.0f));
-        REQUIRE_THAT(filter.Apply(0.0f), WithinRel(1234.0f));
+        REQUIRE_THAT(filter.Process(1234.0f), WithinRel(1234.0f));
+        REQUIRE_THAT(filter.Process(4321.0f), WithinRel(1234.0f));
+        REQUIRE_THAT(filter.Process(0.0f), WithinRel(1234.0f));
       }
     }
 
@@ -36,13 +36,13 @@ TEST_CASE("The EmaFilterRatio class") {
         domain::signal::filters::EmaFilterRatio<1, 4> filter;
 
         using Catch::Matchers::WithinAbs;
-        REQUIRE_THAT(filter.Apply(0.0f), WithinAbs(0.0f, 0.0001f));
+        REQUIRE_THAT(filter.Process(0.0f), WithinAbs(0.0f, 0.0001f));
 
-        float prev = filter.Apply(1000.0f);
+        float prev = filter.Process(1000.0f);
         REQUIRE(prev <= 1000.0f);
 
         for (std::uint32_t i = 0; i < 20; ++i) {
-          const float now = filter.Apply(1000.0f);
+          const float now = filter.Process(1000.0f);
           REQUIRE(now >= prev);
           REQUIRE(now <= 1000.0f);
           prev = now;
@@ -56,7 +56,7 @@ TEST_CASE("The EmaFilterRatio class") {
       SECTION("Should restore the raw fallback behavior") {
         domain::signal::filters::EmaFilterRatio<1, 2> filter;
 
-        REQUIRE_THAT(filter.Apply(1111.0f), Catch::Matchers::WithinRel(1111.0f));
+        REQUIRE_THAT(filter.Process(1111.0f), Catch::Matchers::WithinRel(1111.0f));
         filter.Reset();
 
         REQUIRE_THAT(filter.ComputeOrRaw(2222.0f), Catch::Matchers::WithinRel(2222.0f));

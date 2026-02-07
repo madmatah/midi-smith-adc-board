@@ -25,14 +25,15 @@ target_include_directories(fakeit INTERFACE
 add_executable(unit_tests
     domain/signal/filters/sg5_smoother.test.cpp
     domain/signal/filters/ema_filter.test.cpp
-    domain/signal/filters/filter_pipeline.test.cpp
+    domain/signal/processing_pipeline/continuous_pipeline.test.cpp
+    domain/signal/processing_pipeline/decimated_pipeline.test.cpp
     domain/signal/filters/identity_filter.test.cpp
     domain/shell/command_parser.test.cpp
     domain/shell/line_editor.test.cpp
     domain/shell/command_dispatcher.test.cpp
     domain/shell/shell_engine.test.cpp
     domain/shell/commands/version_command.test.cpp
-    domain/sensors/filtering_sensor_group.test.cpp
+    domain/sensors/processed_sensor_group.test.cpp
     domain/sensors/sensor_group.test.cpp
     domain/sensors/sensor_registry.test.cpp
     app/analog/adc_rank_mapped_frame_decoder.test.cpp

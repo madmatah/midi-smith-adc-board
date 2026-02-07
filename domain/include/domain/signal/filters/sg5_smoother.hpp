@@ -1,7 +1,8 @@
 #pragma once
 
 #include <array>
-#include <cstdint>
+
+#include "domain/signal/signal_processor_concepts.hpp"
 
 namespace domain::signal::filters {
 
@@ -16,7 +17,7 @@ class Sg5Smoother {
     filled_ = 0;
   }
 
-  float Apply(float sample) noexcept {
+  float Process(float sample) noexcept {
     Push(sample);
     return ComputeOrRaw(sample);
   }
@@ -69,5 +70,10 @@ class Sg5Smoother {
   std::size_t next_index_ = 0;
   std::size_t filled_ = 0;
 };
+
+static_assert(domain::signal::is_signal_processor<Sg5Smoother>::value,
+              "Sg5Smoother must satisfy SignalProcessor concept");
+static_assert(domain::signal::is_decimation_compatible<Sg5Smoother>::value,
+              "Sg5Smoother must satisfy DecimationCompatibleSignalProcessor concept");
 
 }  // namespace domain::signal::filters

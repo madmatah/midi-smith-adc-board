@@ -113,8 +113,8 @@ bool AdcDma::Start() noexcept {
   const std::uint16_t sequences_per_half_buffer = SequencesPerHalfBufferFromConfig();
   (void) SEGGER_RTT_printf(
       0u, "ADC start: kernel=%lu Hz rate=%lu Hz seq_half=%u\r\n",
-      static_cast<unsigned long>(HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_ADC)),
-      static_cast<unsigned long>(::app::config::ANALOG_ACQUISITION_CHANNEL_RATE_HZ),
+      static_cast<std::uint32_t>(HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_ADC)),
+      static_cast<std::uint32_t>(::app::config::ANALOG_ACQUISITION_CHANNEL_RATE_HZ),
       static_cast<unsigned>(sequences_per_half_buffer));
 
   adc1_halfwords_per_half_buffer_ =
