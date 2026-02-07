@@ -5,8 +5,8 @@
 
 #include "domain/signal/filters/ema_filter.hpp"
 #include "domain/signal/filters/identity_filter.hpp"
-#include "domain/signal/filters/sg5_smoother.hpp"
-#include "domain/signal/processing_pipeline.hpp"
+#include "domain/signal/processing_pipeline/signal_processing_pipeline.hpp"
+#include "domain/signal/processors/tia_current_converter.hpp"
 
 namespace app::config {
 
@@ -35,6 +35,7 @@ using FilteringPipeline =
 }  // namespace signal_filtering_detail
 
 using AnalogSensorProcessor = domain::signal::processing_pipeline::SignalProcessingPipeline<
+    domain::signal::processors::TiaCurrentConverter<2048, 16, 1800>,
     signal_filtering_detail::FilteringPipeline>;
 
 }  // namespace app::config
