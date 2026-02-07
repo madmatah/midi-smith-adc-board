@@ -73,7 +73,7 @@ leveraging the parallelism of the 3 ADCs with circular DMA.
    * **System Clock Mux**: PLLCLK
    * **SYSCLK**: Set your target frequency  (`440` MHz) and let CubeMX solve the PLLs.
    * **ADC Clock Mux**: Select `PLL2P` in the bottom-right selector.
-   * **PLL2P (ADC kernel clock)**: Adjust PLL2 so that CubeMX shows **ADCCLK ≤ 7 MHz**.
+   * **PLL2P (ADC kernel clock)**: Adjust PLL2 so that CubeMX shows **ADCCLK ≤ 12 MHz**.
      This is mandatory when using **ADC1 + ADC2 + ADC3 simultaneously in 16-bit**.
    * After saving, verify the `.ioc` contains `RCC.ADCFreq_Value` around `7000000`.
    * **FDCAN Clock Mux**: Choose `PLL1Q` to obtain a stable frequency (e.g., 80 MHz).
@@ -187,22 +187,38 @@ In the **Trigger Output (TRGO) Parameters** section:
 ### 4.0 ADC clock limit and throughput
 
 When using ADC1 + ADC2 + ADC3 simultaneously at 16-bit, the ADC kernel clock must be **≤ 7 MHz** according to AN5354.
+After testing, we can go up to 12 MHz without issues.
 
-With ADCCLK = 7 MHz, typical sampling durations are:
+Conversion duration can be calculated with :
+$t_{CONV} = t_{SMPL} + \frac{N}{2} + 0.5$
 
-| Sampling time | Duration (approx) |
-|:--|:--|
-| `64.5 cycles` | ~9.2 µs |
-| `387.5 cycles` | ~55.4 µs |
-| `810.5 cycles` | ~115.8 µs |
+with :
+- t_{SMPL} = sampling time
+- N = resolution (16 = 16bit)
 
-Order-of-magnitude maximum per-channel rates (assuming 16-bit conversion overhead and 7/8 ranks) are:
 
-| Sampling time | ADC1/2 (7 ranks) | ADC3 (8 ranks) |
-|:--|:--|:--|
-| `64.5 cycles` | ~10–12 kHz | ~9–11 kHz |
-| `387.5 cycles` | ~2–3 kHz | ~2–2.5 kHz |
-| `810.5 cycles` | ~1–1.5 kHz | ~1–1.3 kHz |
+To choose the proper per-channel acquisition rate and sampling time (in cycles), we also must take in account the TIA stability.
+
+TLV9004 (op amp) specs:
+- Open-loop impedance (f=1MHz, V=5V): 1200 ohm
+- Settling time (0.01% precision): 3µs
+- Slew rate: 2V / µs
+
+
+
+Here is a summary, with 7MHz ADC Clock and 8 ranks per ADC :
+
+| Sampling (cycles) | Sampling (time​) | Conversion time | Max freq / channel (ADC 8 ranks) | Conclusion |
+|:--|:--|:--|:--|:--|
+| 2.5|"0,35 μs"|"1,57 μs"|"79,54 kHz"|Unusable (op amp too slow) |
+| 8.5|"1,21 μs"|"2,43 μs"|"51,47 kHz"|Unusable (op amp too slow) |
+| 16.5|"2,35 μs"|"3,57 μs"|"35,00 kHz"|Risky (3 μs limit is close) |
+| 32.5|"4,64 μs"|"5,86 μs"|"21,34 kHz"|Ideal (Performance) |
+| 64.5|"9,21 μs"|"10,43 μs"|"11,98 kHz"|Ideal (Security) |
+| 387.5|"55,07 μs"|"56,28 μs"|"2,22 kHz"|Slow |
+
+
+
 
 ### A. General Settings
 **[`Analog` > `ADC1`]**
@@ -371,7 +387,7 @@ How to change the acquisition rate:
 
 - Set `ANALOG_ACQUISITION_CHANNEL_RATE_HZ` in `app/include/app/config/analog_acquisition.hpp`.
 - Keep in mind that the maximum achievable rate depends on:
-  - ADCCLK (must be ≤ 7 MHz in 16-bit on 3 ADCs)
+  - ADCCLK (must be ≤ 12 MHz in 16-bit on 3 ADCs)
   - Sampling time (64.5 vs 387.5 cycles is a large difference)
   - Rank count (7 ranks on ADC1/2, 8 ranks on ADC3)
 - If CPU load becomes too high, increase `ANALOG_ACQUISITION_SEQUENCES_PER_HALF_BUFFER` to reduce DMA IRQ rate.
