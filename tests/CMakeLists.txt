@@ -28,6 +28,7 @@ add_executable(unit_tests
     domain/signal/processing_pipeline/continuous_pipeline.test.cpp
     domain/signal/processing_pipeline/decimated_pipeline.test.cpp
     domain/signal/filters/identity_filter.test.cpp
+    domain/signal/processors/tia_current_converter.test.cpp
     domain/shell/command_parser.test.cpp
     domain/shell/line_editor.test.cpp
     domain/shell/command_dispatcher.test.cpp
