@@ -21,7 +21,7 @@ STM32H743ZIT6 MCU (LQFP144 package) operating at high frequency (up to 480 MHz),
 
 Precision Clocks:
 - The board integrates a 16 MHz HSE crystal (Epson X1E000021011900) for primary operations.
-- No LSE crystal is installed. 
+- No LSE crystal is installed.
 
 ### Analog Front-end & Acquisition
 
@@ -46,7 +46,7 @@ The board is designed for integration into industrial or laboratory environments
 - **UART/USART:** Two serial ports (USART2 and USART3) are exposed via a dedicated connector for telemetry or control.
 
 - **STDC14 / STLINK Debugging:** A standard connector allows for programming and debugging via SWD/JTAG, including a Virtual COM Port (VCP) for serial console access.
- 
+
 ## Power supply
 
 The board features three potential power sources. Precise management of jumpers is required to avoid electrical conflicts and ensure high-accuracy analog measurements.
@@ -106,7 +106,7 @@ Depending on your goal, follow the specific sequence to avoid power conflicts or
 | **ON** | **5V** | **5V** | Any | **DANGER: Power Conflict** |
 
 
- 
+
 ## Jumpers configuration
 
 ### USB Power Selection Jumper (5V_USB)
@@ -229,7 +229,7 @@ $$V_{out} = I_{in} \times 1800$$
 With a voltage reference ($V_{REF}$) of **2.048 V**, the maximum measurable current before saturation is:
 $$I_{max} = \frac{2.048\text{ V}}{1800\text{ }\Omega} \approx 1.137\text{ mA}$$
 
-##### 3. Final Firmware Formula (12-bit Example)
+##### 3. Final Firmware Formula (16-bit Example)
 The TIA circuit operates as an inverting stage relative to $V_{REF}$. As the sensor current increases, the voltage at the ADC pin decreases.
 
 $$V_{out} = V_{REF} - (I_{in} \times R_f)$$
@@ -237,14 +237,21 @@ $$V_{out} = V_{REF} - (I_{in} \times R_f)$$
 To calculate the current in the firmware:
 $$I_{in}\text{ (mA)} = \frac{V_{REF} - V_{measured}}{R_f}$$
 
-**Simplified 12-bit ADC version:**
-$$I_{in}\text{ (mA)} = \frac{(4095 - ADC\_val) \times 2.048}{4095 \times 1.8}$$
+**Simplified 16-bit ADC version:**
+$$I_{in}\text{ (mA)} = \frac{(65535 - ADC\_val) \times 2048}{65535 \times 1800}$$
 
-| Sensor State | ADC Value (12-bit) | Voltage at MCU | Input Current |
+To optimize, we can calculate the scale factor once and use it in the firmware:
+$$S_{f} = \frac{V_{REF}}{65535 \times R_f}$$
+
+Then :
+$$I_{in}\text{ (mA)} = (65535 - ADC\_val) \times S_{f}$$
+
+
+| Sensor State | ADC Value (16-bit) | Voltage at MCU | Input Current |
 | :--- | :--- | :--- | :--- |
-| **No Light** | 4095 | 2.048 V | 0 µA |
-| **Mid Range** | 2048 | 1.024 V | 568.8 µA |
-| **Max Light** | 0 | 0 V | 1.137 mA |
+| **No Light** | 65535 | 2.048 V | 0 µA |
+| **Mid Range** | 32768 | 1.024 V | 568.9 µA |
+| **Max Light** | 0 | 0 V | 1.1378 mA |
 
 
 ### TIA Shutdown Control (Analog Power Management)
@@ -281,7 +288,7 @@ The TLV9004S features **Active Low** shutdown pins. The MCU operates with the fo
 > [!NOTE]
 > The SHDN pins include internal pull-up resistors. If the MCU pin is in a high-impedance state (e.g., during a firmware flash or reset), the amplifiers will default to **Active Mode**.
 
- 
+
 ### CAN Bus interface (FDCAN)
 
 The board integrates a **TJA1042** transceiver for CAN communication. On the STM32H7, this is managed by the **FDCAN1** peripheral.
@@ -293,7 +300,7 @@ The board integrates a **TJA1042** transceiver for CAN communication. On the STM
 | **104** | **PA12** | **CAN_TX** | FDCAN1_TX | Transmit Data Output |
 | **103** | **PA11** | **CAN_RX** | FDCAN1_RX | Receive Data Input |
 | **101** | **PA9** | **CAN_STB** | GPIO Output | Standby Mode Control |
- 
+
 
  #### Transceiver Power Modes
 
