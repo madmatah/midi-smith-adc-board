@@ -93,7 +93,7 @@ AnalogAcquisitionTask::AnalogAcquisitionTask(
     os::Queue<app::analog::AcquisitionCommand, 4>& control_queue,
     bsp::GpioRequirements& tia_shutdown, bsp::adc::AdcDma& adc_dma,
     app::time::TimestampCounterRequirements& timestamp_counter,
-    volatile app::analog::AcquisitionState& state, FilteredSensorGroup& analog_group) noexcept
+    volatile app::analog::AcquisitionState& state, ProcessedSensorGroup& analog_group) noexcept
     : queue_(queue),
       control_queue_(control_queue),
       tia_shutdown_(tia_shutdown),

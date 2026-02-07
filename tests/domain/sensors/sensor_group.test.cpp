@@ -32,15 +32,15 @@ TEST_CASE("The SensorGroup class") {
       group.UpdateAt(1, 1234, 99);
 
       REQUIRE(s2.last_raw_value() == 1234);
-      REQUIRE_THAT(s2.last_filtered_value(), WithinAbs(1234.0f, 0.001f));
+      REQUIRE_THAT(s2.last_processed_value(), WithinAbs(1234.0f, 0.001f));
       REQUIRE(s2.last_timestamp_ticks() == 99);
     }
   }
-  SECTION("The last_filtered_value_int() method") {
+  SECTION("The last_processed_value_int() method") {
     SECTION("Should return the truncated integer value") {
       domain::sensors::Sensor s(1);
       s.Update(1000, 1234.56f, 0);
-      REQUIRE(s.last_filtered_value_int() == 1234);
+      REQUIRE(s.last_processed_value_int() == 1234);
     }
   }
 }

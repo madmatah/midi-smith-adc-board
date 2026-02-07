@@ -7,12 +7,11 @@
 #include "app/composition/subsystems.hpp"
 #include "app/config/sensors.hpp"
 #include "app/config/sensors_validation.hpp"
-#include "app/config/signal_filtering.hpp"
 #include "app/tasks/analog_acquisition_task.hpp"
 #include "bsp/adc/adc_dma.hpp"
 #include "bsp/pins.hpp"
 #include "bsp/time/tim2_timestamp_counter.hpp"
-#include "domain/sensors/filtering_sensor_group.hpp"
+#include "domain/sensors/processed_sensor_group.hpp"
 #include "domain/sensors/sensor_registry.hpp"
 #include "os/queue.hpp"
 
@@ -58,10 +57,10 @@ domain::sensors::SensorRegistry& SensorsRegistry() noexcept {
   return registry;
 }
 
-using Filter = app::config::AnalogSensorFilter;
-using FilteredSensorGroup = domain::sensors::FilteringSensorGroup<Filter>;
+using Processor = app::config::AnalogSensorProcessor;
+using ProcessedSensorGroup = domain::sensors::ProcessedSensorGroup<Processor>;
 
-void StartAnalogAcquisitionTask(FilteredSensorGroup& analog_group) noexcept {
+void StartAnalogAcquisitionTask(ProcessedSensorGroup& analog_group) noexcept {
   static os::Queue<bsp::adc::AdcFrameDescriptor, 8> adc_frame_queue;
   static bsp::adc::AdcDma adc_dma(adc_frame_queue);
   static bsp::time::TimestampCounter timestamp_counter = bsp::time::CreateTim2TimestampCounter();
@@ -104,17 +103,15 @@ AdcControlContext CreateAnalogSubsystem() noexcept {
                 "ADC3 rank count must match AdcDma ranks");
 
   static domain::sensors::Sensor* sensors_ptrs[app::config_sensors::kSensorCount];
-  static std::array<Filter, app::config_sensors::kSensorCount> filters{};
-  static std::array<std::uint8_t, app::config_sensors::kSensorCount> filter_phases{};
+  static std::array<Processor, app::config_sensors::kSensorCount> processors{};
 
   domain::sensors::SensorRegistry& registry = SensorsRegistry();
   for (std::size_t i = 0; i < app::config_sensors::kSensorCount; ++i) {
     sensors_ptrs[i] = registry.FindById(app::config_sensors::kSensorIds[i]);
   }
 
-  static FilteredSensorGroup analog_group(sensors_ptrs, filters.data(), filter_phases.data(),
-                                          app::config_sensors::kSensorCount,
-                                          app::config::SIGNAL_DECIMATION_FACTOR);
+  static ProcessedSensorGroup analog_group(sensors_ptrs, processors.data(),
+                                           app::config_sensors::kSensorCount);
 
   StartAnalogAcquisitionTask(analog_group);
   return AdcControlContext{AdcControl()};

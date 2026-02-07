@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "domain/signal/signal_processor_concepts.hpp"
+
 namespace domain::signal::filters {
 
 template <std::int32_t kAlphaNumerator, std::int32_t kAlphaDenominator>
@@ -20,7 +22,7 @@ class EmaFilterRatio {
     value_ = 0.0f;
   }
 
-  float Apply(float sample) noexcept {
+  float Process(float sample) noexcept {
     Push(sample);
     return ComputeOrRaw(sample);
   }
@@ -46,5 +48,10 @@ class EmaFilterRatio {
   bool has_value_ = false;
   float value_ = 0.0f;
 };
+
+static_assert(domain::signal::is_signal_processor<EmaFilterRatio<1, 1>>::value,
+              "EmaFilterRatio<1, 1> must satisfy SignalProcessor concept");
+static_assert(domain::signal::is_decimation_compatible<EmaFilterRatio<1, 1>>::value,
+              "EmaFilterRatio<1, 1> must satisfy DecimationCompatibleSignalProcessor concept");
 
 }  // namespace domain::signal::filters

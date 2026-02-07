@@ -4,10 +4,6 @@
 
 namespace domain::sensors {
 
-enum class SensorRttMode : std::uint8_t {
-  kRaw = 0,
-  kFiltered = 1,
-  kBoth = 2,
-};
+enum class SensorRttMode : std::uint8_t { kRaw = 0, kProcessed = 1 };
 
 }  // namespace domain::sensors

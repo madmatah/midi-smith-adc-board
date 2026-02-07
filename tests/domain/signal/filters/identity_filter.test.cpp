@@ -7,15 +7,15 @@
 TEST_CASE("The IdentityFilter class") {
   using Catch::Matchers::WithinRel;
 
-  SECTION("The Apply() method") {
+  SECTION("The Process() method") {
     SECTION("When called with any input value") {
       SECTION("Should return the input value unchanged") {
         domain::signal::filters::IdentityFilter filter;
 
-        REQUIRE_THAT(filter.Apply(0.0f), WithinRel(0.0f));
-        REQUIRE_THAT(filter.Apply(1.0f), WithinRel(1.0f));
-        REQUIRE_THAT(filter.Apply(42.0f), WithinRel(42.0f));
-        REQUIRE_THAT(filter.Apply(65535.0f), WithinRel(65535.0f));
+        REQUIRE_THAT(filter.Process(0.0f), WithinRel(0.0f));
+        REQUIRE_THAT(filter.Process(1.0f), WithinRel(1.0f));
+        REQUIRE_THAT(filter.Process(42.0f), WithinRel(42.0f));
+        REQUIRE_THAT(filter.Process(65535.0f), WithinRel(65535.0f));
       }
     }
   }

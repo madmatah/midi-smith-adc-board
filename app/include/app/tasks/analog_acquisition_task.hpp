@@ -6,11 +6,11 @@
 #include "app/analog/acquisition_state.hpp"
 #include "app/analog/adc_rank_mapped_frame_decoder.hpp"
 #include "app/config/sensors.hpp"
-#include "app/config/signal_filtering.hpp"
+#include "app/config/signal_processing.hpp"
 #include "app/time/timestamp_counter_requirements.hpp"
 #include "bsp/adc/adc_dma.hpp"
 #include "bsp/gpio_requirements.hpp"
-#include "domain/sensors/filtering_sensor_group.hpp"
+#include "domain/sensors/processed_sensor_group.hpp"
 #include "os/queue.hpp"
 
 namespace app::analog {
@@ -21,15 +21,15 @@ namespace app::Tasks {
 
 class AnalogAcquisitionTask {
  public:
-  using Filter = app::config::AnalogSensorFilter;
-  using FilteredSensorGroup = domain::sensors::FilteringSensorGroup<Filter>;
+  using Processor = app::config::AnalogSensorProcessor;
+  using ProcessedSensorGroup = domain::sensors::ProcessedSensorGroup<Processor>;
 
   AnalogAcquisitionTask(os::Queue<bsp::adc::AdcFrameDescriptor, 8>& queue,
                         os::Queue<app::analog::AcquisitionCommand, 4>& control_queue,
                         bsp::GpioRequirements& tia_shutdown, bsp::adc::AdcDma& adc_dma,
                         app::time::TimestampCounterRequirements& timestamp_counter,
                         volatile app::analog::AcquisitionState& state,
-                        FilteredSensorGroup& analog_group) noexcept;
+                        ProcessedSensorGroup& analog_group) noexcept;
 
   bool start() noexcept;
 
@@ -53,7 +53,7 @@ class AnalogAcquisitionTask {
   bsp::adc::AdcDma& adc_dma_;
   app::time::TimestampCounterRequirements& timestamp_counter_;
   volatile app::analog::AcquisitionState& state_;
-  FilteredSensorGroup& analog_group_;
+  ProcessedSensorGroup& analog_group_;
 
   app::analog::AdcRankMappedFrameDecoder decoder_{};
 

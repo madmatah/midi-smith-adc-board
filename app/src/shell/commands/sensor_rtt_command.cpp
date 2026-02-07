@@ -23,7 +23,7 @@ std::string_view Arg(int argc, char** argv, int index) noexcept {
 }
 
 void WriteUsage(domain::io::WritableStreamRequirements& out) noexcept {
-  out.Write("usage: sensor_rtt <id> [raw|filtered|both]\r\n");
+  out.Write("usage: sensor_rtt <id> [raw|processed]\r\n");
   out.Write("       sensor_rtt freq [value]\r\n");
   out.Write("       sensor_rtt off\r\n");
   out.Write("       sensor_rtt status\r\n");
@@ -108,11 +108,8 @@ void WriteStatus(domain::io::WritableStreamRequirements& out,
     case domain::sensors::SensorRttMode::kRaw:
       out.Write("raw");
       break;
-    case domain::sensors::SensorRttMode::kFiltered:
-      out.Write("filtered");
-      break;
-    case domain::sensors::SensorRttMode::kBoth:
-      out.Write("both");
+    case domain::sensors::SensorRttMode::kProcessed:
+      out.Write("processed");
       break;
   }
   out.Write(" period_ms=");
@@ -162,12 +159,10 @@ bool TryParseCommand(int argc, char** argv, SensorRttParsedCommand& parsed,
   parsed.sensor_id = static_cast<std::uint8_t>(sensor_id_u32);
 
   const std::string_view mode_arg = Arg(argc, argv, 2);
-  if (mode_arg.empty() || mode_arg == "raw") {
+  if (mode_arg.empty() || mode_arg == "processed" || mode_arg == "p") {
+    parsed.mode = domain::sensors::SensorRttMode::kProcessed;
+  } else if (mode_arg == "raw") {
     parsed.mode = domain::sensors::SensorRttMode::kRaw;
-  } else if (mode_arg == "filtered") {
-    parsed.mode = domain::sensors::SensorRttMode::kFiltered;
-  } else if (mode_arg == "both") {
-    parsed.mode = domain::sensors::SensorRttMode::kBoth;
   } else {
     WriteUsage(out);
     return false;
