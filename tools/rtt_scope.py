@@ -202,9 +202,11 @@ class ScrollBar:
 class RttScope:
     """Visualizes RTT data using Vispy."""
 
-    def __init__(self, sample_count: int, y_max_initial: float, auto_scale: bool = True):
+    def __init__(self, sample_count: int, y_max_initial: float, auto_scale: bool = True,
+                 data_format: str = "float32"):
         self.sample_count = sample_count
         self.auto_scale_enabled = auto_scale
+        self.data_format = data_format
 
         # History Configuration
         self.history_factor = 30
@@ -708,7 +710,7 @@ class RttScope:
         scale_label = "AUTO" if self.auto_scale_enabled else "MANUAL"
 
         # Build full status text
-        text = f"Status: {conn_status} | Data mode: {data_mode} | Scale: {scale_label}"
+        text = f"Status: {conn_status} | Data mode: {data_mode} | Scale: {scale_label} | Format: {self.data_format}"
 
         # Special overlays (Snapshots / Hover values)
         if self.snapshot_message and current_time < self.snapshot_message_expiry:
@@ -733,13 +735,16 @@ def main():
     parser.add_argument("--points", type=int, default=10000, help="Number of points to display")
     parser.add_argument("--y-max", type=float, default=16384, help="Initial Y axis maximum")
     parser.add_argument("--no-auto-scale", action="store_true", help="Disable auto-scaling on startup")
+    parser.add_argument("--format", choices=["float32", "uint32"], default="float32",
+                        help="Data format (default: float32)")
 
     args = parser.parse_args()
 
     scope = RttScope(
         sample_count=args.points,
         y_max_initial=args.y_max,
-        auto_scale=not args.no_auto_scale
+        auto_scale=not args.no_auto_scale,
+        data_format=args.format
     )
 
     with RttClient(args.host, args.port) as client:
@@ -751,7 +756,8 @@ def main():
                 if raw_data:
                     value_count = len(raw_data) // 4
                     if value_count > 0:
-                        new_values = struct.unpack('<' + 'I' * value_count, raw_data[:value_count*4])
+                        fmt_char = 'f' if args.format == 'float32' else 'I'
+                        new_values = struct.unpack('<' + fmt_char * value_count, raw_data[:value_count*4])
                         scope.process_incoming_values(new_values)
                         processed = True
 

@@ -10,7 +10,7 @@
 
 namespace app::config {
 
-constexpr bool SIGNAL_FILTERING_ENABLED = true;
+constexpr bool SIGNAL_FILTERING_ENABLED = false;
 
 constexpr std::int32_t SIGNAL_EMA_ALPHA_NUMERATOR = 1;
 constexpr std::int32_t SIGNAL_EMA_ALPHA_DENOMINATOR = 8;
